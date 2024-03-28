@@ -642,9 +642,9 @@ namespace Radzen
 
                 try
                 {
-                    selectedIndex = await JSRuntime.InvokeAsync<int>("Radzen.focusListItem", search, list, key == "ArrowDown" || key == "ArrowRight", selectedIndex);
-
                     var popupOpened = await JSRuntime.InvokeAsync<bool>("Radzen.popupOpened", PopupID);
+                
+                    selectedIndex = await JSRuntime.InvokeAsync<int>("Radzen.focusListItem", search, list, key == "ArrowDown" || key == "ArrowRight", selectedIndex);
 
                     if (!Multiple && !popupOpened && shouldSelectOnChange != false)
                     {
