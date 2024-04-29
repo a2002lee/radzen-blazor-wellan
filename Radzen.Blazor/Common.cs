@@ -1744,7 +1744,11 @@ namespace Radzen
         /// <summary>
         /// The component displays a popup filtering UI and allows you to pick filtering operator and or filter by multiple values.
         /// </summary>
-        Advanced
+        Advanced,
+        /// <summary>
+        /// The component displays a popup filtering UI and allows you to pick multiple values from list of all values.
+        /// </summary>
+        CheckBoxList
     }
 
     /// <summary>
@@ -2832,8 +2836,46 @@ namespace Radzen
             {
                 return true;
             }
-
+#if NET6_0_OR_GREATER
+            if (type == typeof(DateOnly))
+            {
+                return true;
+            }
+#endif
             return false;
+        }
+
+        /// <summary>
+        /// Determines whether the specified type is a DateOnly.
+        /// </summary>
+        /// <param name="source">The source.</param>
+        /// <returns><c>true</c> if the specified type is a DateOnly instance or nullable DateOnly; otherwise, <c>false</c>.</returns>
+        public static bool IsDateOnly(Type source)
+        {
+            if (source == null) return false;
+            var type = source.IsGenericType ? source.GetGenericArguments()[0] : source;
+
+#if NET6_0_OR_GREATER
+            if (type == typeof(DateOnly))
+            {
+                return true;
+            }
+#endif
+            return false;
+        }
+
+        /// <summary>
+        /// Determines whether the specified type is a DateOnly.
+        /// </summary>
+        /// <param name="source">The source.</param>
+        /// <returns><c>true</c> if the specified type is a DateOnly instance or nullable DateOnly; otherwise, <c>false</c>.</returns>
+        public static object DateOnlyFromDateTime(DateTime source)
+        {
+            object result = null;
+#if NET6_0_OR_GREATER
+            result = DateOnly.FromDateTime(source);
+#endif
+            return result;
         }
 
         /// <summary>

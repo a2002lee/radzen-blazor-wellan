@@ -654,7 +654,7 @@ window.Radzen = {
         table.nextSelectedIndex = rows.length - 1;
     } else if (isVirtual && (key == 'PageUp' || key == 'Home')) {
         table.nextSelectedIndex = 1;
-    } 
+    }
 
     if (key == 'ArrowLeft' || key == 'ArrowRight' || (key == 'ArrowUp' && table.nextSelectedIndex == 0 && table.parentNode.scrollTop == 0)) {
         var highlightedCells = rows[table.nextSelectedIndex].querySelectorAll('.rz-state-focused');
@@ -697,7 +697,7 @@ window.Radzen = {
                 }
             }
         }
-    } 
+    }
 
     return [table.nextSelectedIndex, table.nextSelectedCellIndex];
   },
@@ -952,16 +952,30 @@ window.Radzen = {
 
       var button = el.querySelector('.rz-datepicker-trigger');
       if (button) {
-          button.onclick = null
+          button.onclick = null;
+      }
+      var input = el.querySelector('.rz-inputtext');
+      if (input) {
+          input.onclick = null;
       }
   },
   createDatePicker(el, popupId) {
+      var handler = function (e, condition) {
+          if (condition) {
+              Radzen.togglePopup(e.currentTarget.parentNode, popupId, false, null, null, true, false);
+          }
+      };
+
       var button = el.querySelector('.rz-datepicker-trigger');
       if (button) {
           button.onclick = function (e) {
-              if (!e.currentTarget.classList.contains('rz-state-disabled')) {
-                  Radzen.togglePopup(e.currentTarget.parentNode, popupId, false, null, null, true, false);
-              }
+              handler(e, !e.currentTarget.classList.contains('rz-state-disabled'));
+          };
+      }
+      var input = el.querySelector('.rz-inputtext');
+      if (input) {
+          input.onclick = function (e) {
+              handler(e, e.currentTarget.classList.contains('rz-readonly'));
           };
       }
   },
@@ -1238,7 +1252,7 @@ window.Radzen = {
         }, 100);
     }
   },
-  popupOpened: function (id) { 
+  popupOpened: function (id) {
     var popup = document.getElementById(id);
     if (popup) {
         return popup.style.display != 'none';
@@ -1711,6 +1725,12 @@ window.Radzen = {
       }
     };
 
+    ref.clickListener = function (e) {
+      if (e.target && e.target.matches('a,button')) {
+        e.preventDefault();
+      }
+    }
+
     ref.selectionChangeListener = function () {
       if (document.activeElement == ref) {
         instance.invokeMethodAsync('OnSelectionChange');
@@ -1765,6 +1785,7 @@ window.Radzen = {
     ref.addEventListener('input', ref.inputListener);
     ref.addEventListener('paste', ref.pasteListener);
     ref.addEventListener('keydown', ref.keydownListener);
+    ref.addEventListener('click', ref.clickListener);
     document.addEventListener('selectionchange', ref.selectionChangeListener);
     document.execCommand('styleWithCSS', false, true);
   },
@@ -1830,6 +1851,7 @@ window.Radzen = {
       ref.removeEventListener('input', ref.inputListener);
       ref.removeEventListener('paste', ref.pasteListener);
       ref.removeEventListener('keydown', ref.keydownListener);
+      ref.removeEventListener('click', ref.clickListener);
       document.removeEventListener('selectionchange', ref.selectionChangeListener);
     }
   },
@@ -1841,7 +1863,7 @@ window.Radzen = {
       instance.invokeMethodAsync(handler, { clientX: e.clientX, clientY: e.clientY });
     };
     ref.touchMoveHandler = function (e) {
-      if (e.targetTouches[0]) {
+      if (e.targetTouches[0] && ref.contains(e.targetTouches[0].target)) {
         instance.invokeMethodAsync(handler, { clientX: e.targetTouches[0].clientX, clientY: e.targetTouches[0].clientY });
       }
     };
@@ -1850,7 +1872,7 @@ window.Radzen = {
     };
     document.addEventListener('mousemove', ref.mouseMoveHandler);
     document.addEventListener('mouseup', ref.mouseUpHandler);
-    document.addEventListener('touchmove', ref.touchMoveHandler, { passive: true })
+    document.addEventListener('touchmove', ref.touchMoveHandler, { passive: true, capture: true })
     document.addEventListener('touchend', ref.mouseUpHandler, { passive: true });
     return Radzen.clientRect(ref);
   },

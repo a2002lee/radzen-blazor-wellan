@@ -274,7 +274,7 @@ namespace Radzen.Blazor
             }
         }
 
-        internal async Task ClosePopup()
+        internal async Task PopupClose()
         {
             await JSRuntime.InvokeVoidAsync("Radzen.closePopup", PopupID);
         }
