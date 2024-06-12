@@ -75,6 +75,13 @@ namespace Radzen.Blazor
         public string ChooseText { get; set; } = "Choose";
 
         /// <summary>
+        /// Gets or sets the choose button text.
+        /// </summary>
+        /// <value>The choose button text.</value>
+        [Parameter]
+        public string DeleteText { get; set; } = "Delete";
+
+        /// <summary>
         /// Gets or sets the URL.
         /// </summary>
         /// <value>The URL.</value>
@@ -115,6 +122,13 @@ namespace Radzen.Blazor
         /// <value>The icon color.</value>
         [Parameter]
         public string IconColor { get; set; }
+
+        /// <summary>
+        /// Gets or sets the maximum number of files.
+        /// </summary>
+        /// <value>The maximum number of files.</value>
+        [Parameter]
+        public int MaxFileCount { get; set; } = 10;
 
         /// <summary>
         /// Gets or sets a value indicating whether this <see cref="RadzenUpload"/> is disabled.
@@ -379,7 +393,7 @@ namespace Radzen.Blazor
                 return;
             }
 
-            var files = Multiple ? args.GetMultipleFiles().Select(f => new FileInfo(f))
+            var files = Multiple ? args.GetMultipleFiles(MaxFileCount).Select(f => new FileInfo(f))
                 : new FileInfo[] { new FileInfo (args.File) };
 
             this.files = files.Select(f => new PreviewFileInfo() { Name = f.Name, Size = f.Size  }).ToList();

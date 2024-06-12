@@ -46,7 +46,7 @@ namespace Radzen
             var totalItemsCount = LoadData.HasDelegate ? Count : view.Count();
             var top = request.Count;
 
-            if(top <= 0)
+            if (top <= 0)
             {
                 top = PageSize;
             }
@@ -122,7 +122,7 @@ namespace Radzen
                         });
                     }));
 
-                    if(VirtualizationOverscanCount != default(int))
+                    if (VirtualizationOverscanCount != default(int))
                     {
                         builder.AddAttribute(3, "OverscanCount", VirtualizationOverscanCount);
                     }
@@ -195,6 +195,13 @@ namespace Radzen
         }
 
         /// <summary>
+        /// Gets or sets the header template.
+        /// </summary>
+        /// <value>The header template.</value>
+        [Parameter]
+        public RenderFragment HeaderTemplate { get; set; }
+
+        /// <summary>
         /// Gets or sets a value indicating whether filtering is allowed. Set to <c>false</c> by default.
         /// </summary>
         /// <value><c>true</c> if filtering is allowed; otherwise, <c>false</c>.</value>
@@ -263,6 +270,13 @@ namespace Radzen
         /// <value>The search aria label text.</value>
         [Parameter]
         public string SearchAriaLabel { get; set; } = "Search";
+
+        /// <summary>
+        /// Gets or sets the empty value aria label text.
+        /// </summary>
+        /// <value>The empty value aria label text.</value>
+        [Parameter]
+        public string EmptyAriaLabel { get; set; } = "Empty";
 
         /// <summary>
         /// Gets or sets the selected item changed.
@@ -443,19 +457,32 @@ namespace Radzen
 
                 if (!string.IsNullOrEmpty(ValueProperty))
                 {
-                    valuePropertyGetter = PropertyAccess.Getter<object, object>(ValueProperty, type);
+                    valuePropertyGetter = GetGetter(ValueProperty, type);
                 }
 
                 if (!string.IsNullOrEmpty(TextProperty))
                 {
-                    textPropertyGetter = PropertyAccess.Getter<object, object>(TextProperty, type);
+                    textPropertyGetter = GetGetter(TextProperty, type);
                 }
 
                 if (!string.IsNullOrEmpty(DisabledProperty))
                 {
-                    disabledPropertyGetter = PropertyAccess.Getter<object, object>(DisabledProperty, type);
+                    disabledPropertyGetter = GetGetter(DisabledProperty, type);
                 }
             }
+        }
+
+        Func<object, object> GetGetter(string propertyName, Type type)
+        {
+            if (propertyName?.Contains("[") == true)
+            {
+                var getter = typeof(PropertyAccess).GetMethod("Getter", [typeof(string), typeof(Type)]);
+                var getterMethod = getter.MakeGenericMethod([type, typeof(object)]);
+
+                return (i) => getterMethod.Invoke(i, [propertyName, type]);
+            }
+
+            return PropertyAccess.Getter<object, object>(propertyName, type);
         }
 
         internal Func<object, object> valuePropertyGetter;
@@ -524,7 +551,7 @@ namespace Radzen
         /// Gets the search identifier.
         /// </summary>
         /// <value>The search identifier.</value>
-        protected string SearchID
+        public string SearchID
         {
             get
             {
@@ -721,11 +748,11 @@ namespace Radzen
 
                 Debounce(DebounceFilter, FilterDelay);
             }
-            else 
+            else
             {
-                var filteredItems = GetView(items.AsQueryable(), 
-                    args.Key, 
-                    StringFilterOperator.StartsWith, 
+                var filteredItems = GetView(items.AsQueryable(),
+                    args.Key,
+                    StringFilterOperator.StartsWith,
                     FilterCaseSensitivity.CaseInsensitive)
                     .Cast<object>()
                     .ToList();
@@ -755,7 +782,7 @@ namespace Radzen
                             selectedIndex = result.Index;
                         }
                         await JSRuntime.InvokeVoidAsync("Radzen.selectListItem", list, list, result.Index);
-                    }                    
+                    }
                 }
 
                 preventKeydown = false;
@@ -909,7 +936,7 @@ namespace Radzen
         {
 #if NET5_0_OR_GREATER
             var pageSize = parameters.GetValueOrDefault<int>(nameof(PageSize));
-            if(pageSize != default(int))
+            if (pageSize != default(int))
             {
                 PageSize = pageSize;
             }
@@ -951,7 +978,7 @@ namespace Radzen
 
             if (valueAsEnumerable != null)
             {
-                if (!valueAsEnumerable.Cast<object>().SequenceEqual(selectedItems.Select(i => GetItemOrValueFromProperty(i, ValueProperty))))
+                if (!valueAsEnumerable.Cast<object>().SequenceEqual(selectedItems.Select(i => string.IsNullOrEmpty(ValueProperty) ? i : GetItemOrValueFromProperty(i, ValueProperty))))
                 {
                     selectedItems.Clear();
                 }
@@ -1088,7 +1115,7 @@ namespace Radzen
                 }
                 else
                 {
-                    result = source.Where(String.Join(".", query), search);
+                    result = source.Where(DynamicLinqCustomTypeProvider.ParsingConfig, string.Join(".", query), search);
                 }
             }
             else
@@ -1157,7 +1184,7 @@ namespace Radzen
         /// <param name="raiseChange">if set to <c>true</c> [raise change].</param>
         public async System.Threading.Tasks.Task SelectItem(object item, bool raiseChange = true)
         {
-            if (disabledPropertyGetter != null && disabledPropertyGetter(item) as bool? == true)
+            if (disabledPropertyGetter != null && item != null && disabledPropertyGetter(item) as bool? == true)
             {
                 return;
             }
@@ -1277,7 +1304,7 @@ namespace Radzen
                 }
                 else
                 {
-                    selectedItems = selectedItems.AsQueryable().Where($@"!object.Equals(it.{ValueProperty},@0)", value).ToList();
+                    selectedItems = selectedItems.AsQueryable().Where(DynamicLinqCustomTypeProvider.ParsingConfig, $@"!object.Equals(it.{ValueProperty},@0)", value).ToList();
                 }
             }
             else
@@ -1312,7 +1339,7 @@ namespace Radzen
                         }
                         else
                         {
-                            SelectedItem = view.AsQueryable().Where($@"{ValueProperty} == @0", value).FirstOrDefault();
+                            SelectedItem = view.AsQueryable().Where(DynamicLinqCustomTypeProvider.ParsingConfig, $@"{ValueProperty} == @0", value).FirstOrDefault();
                         }
                     }
                     else
@@ -1339,10 +1366,10 @@ namespace Radzen
                                 }
                                 else
                                 {
-                                    item = view.AsQueryable().Where($@"{ValueProperty} == @0", v).FirstOrDefault();
+                                    item = view.AsQueryable().Where(DynamicLinqCustomTypeProvider.ParsingConfig, $@"{ValueProperty} == @0", v).FirstOrDefault();
                                 }
 
-                                if (!object.Equals(item, null) && !selectedItems.AsQueryable().Where($@"object.Equals(it.{ValueProperty},@0)", v).Any())
+                                if (!object.Equals(item, null) && !selectedItems.AsQueryable().Where(DynamicLinqCustomTypeProvider.ParsingConfig, $@"object.Equals(it.{ValueProperty},@0)", v).Any())
                                 {
                                     selectedItems.Add(item);
                                 }

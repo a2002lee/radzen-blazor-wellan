@@ -1,5 +1,4 @@
 ﻿@using Radzen
-@using System.Linq.Dynamic.Core
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.JSInterop
 @using Microsoft.AspNetCore.Components.Rendering
@@ -9,10 +8,16 @@
 {
     <div @ref="@Element" style="@Style" @attributes="Attributes" class="@GetCssClass()" tabindex="@(Disabled ? "-1" : $"{TabIndex}")" @onkeydown="@OnKeyDown" id="@GetId()">
         <div class="rz-helper-hidden-accessible">
-            <input name="@Name" readonly="@ReadOnly" disabled="@Disabled" type="text" @attributes=@InputAttributes />
+            <input name="@Name" readonly="@ReadOnly" disabled="@Disabled" type="text" aria-label="@(!Multiple && internalValue != null ? internalValue : EmptyAriaLabel)" @attributes=@InputAttributes />
         </div>
-        @if (View != null && (AllowFiltering || (Multiple && AllowSelectAll)))
+        @if (View != null && (AllowFiltering || (Multiple && AllowSelectAll) || HeaderTemplate != null))
         {
+            @if (HeaderTemplate != null)
+            {
+                @HeaderTemplate
+            }
+            else
+            {
             <div class=" rz-listbox-header rz-helper-clearfix rz-listbox-header-w-checkbox">
                 @if (Multiple)
                 {
@@ -42,6 +47,7 @@
                     </div>
                 }
             </div>
+            }
         }
         @if (View != null)
         {

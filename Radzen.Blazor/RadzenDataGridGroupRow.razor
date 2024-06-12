@@ -3,6 +3,14 @@
 @using System.Globalization
 @{
     var rowArgs = Grid?.GroupRowAttributes(this);
+
+    if (Grid != null)
+    {
+        if (rowArgs.Item1.Expanded == true && Grid.collapsedGroupItems.ContainsKey(this))
+        {
+            Grid.collapsedGroupItems.Remove(this);
+        }
+    }
 }
 <tr class="rz-group-row" @attributes="@rowArgs.Item2">
      @if (Grid.ShowGroupExpandColumn)
@@ -19,7 +27,7 @@
         }
         <td class="rz-col-icon">
             <span class="rz-column-title"></span>
-            <a aria-label=@Grid.ExpandGroupAriaLabel @onclick:preventDefault="true" @onclick="@(_ => Grid.ExpandGroupItem(this, rowArgs.Item1.Expanded))">
+            <a id="@(Grid.GridId() + Group.GetHashCode())" aria-label=@Grid.ExpandGroupAriaLabel @onclick:preventDefault="true" @onclick="@(_ => Grid.ExpandGroupItem(this, rowArgs.Item1.Expanded))">
                 <span class="@(Grid.ExpandedGroupItemStyle(this, Grid.allGroupsExpanded != null ? Grid.allGroupsExpanded : rowArgs.Item1.Expanded))"></span>
             </a>
         </td>

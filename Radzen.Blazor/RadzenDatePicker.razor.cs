@@ -40,6 +40,20 @@ namespace Radzen.Blazor
         public string CalendarWeekTitle { get; set; } = "#";
 
         /// <summary>
+        /// Gets or sets the toggle popup aria label text.
+        /// </summary>
+        /// <value>The toggle popup aria label text.</value>
+        [Parameter]
+        public string ToggleAriaLabel { get; set; } = "Toggle";
+
+        /// <summary>
+        /// Gets or sets the OK button aria label text.
+        /// </summary>
+        /// <value>The OK button aria label text.</value>
+        [Parameter]
+        public string OkAriaLabel { get; set; } = "Ok";
+
+        /// <summary>
         /// Gets or sets the previous month aria label text.
         /// </summary>
         /// <value>The previous month aria label text.</value>
@@ -137,6 +151,7 @@ namespace Radzen.Blazor
         {
             if (ShowTimeOkButton)
             {
+                DateTimeValue = newValue;
                 CurrentDate = newValue;
             }
             else
@@ -935,6 +950,10 @@ namespace Radzen.Blazor
             {
                 DateTimeOffset? offset = DateTime.SpecifyKind((DateTime)Value, Kind);
                 await ValueChanged.InvokeAsync((TValue)(object)offset);
+            }
+            else if ((typeof(TValue) == typeof(DateTime) || typeof(TValue) == typeof(DateTime?)) && Value != null)
+            {
+                await ValueChanged.InvokeAsync((TValue)(object)DateTime.SpecifyKind((DateTime)Value, Kind));
             }
             else
             {

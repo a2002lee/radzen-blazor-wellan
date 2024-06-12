@@ -1,4 +1,3 @@
-@using System.Linq.Dynamic.Core
 @using Microsoft.JSInterop
 @using Microsoft.AspNetCore.Components.Forms
 @using Radzen
@@ -37,7 +36,7 @@
                             {
                                 <div class="rz-group-header-item">
                                     <span class="rz-group-header-item-title">@gd.GetTitle()</span>
-                                    <a aria-label="@RemoveGroupArialLabel" @onclick:preventDefault="true" @onclick=@(args => RemoveGroupAsync(gd)) role="button" class="rz-dialog-titlebar-icon rz-dialog-titlebar-close">
+                                    <a id="@(GetId() + "rg")" aria-label="@RemoveGroupArialLabel" @onclick:preventDefault="true" @onclick=@(args => RemoveGroupAsync(gd)) role="button" class="rz-dialog-titlebar-icon rz-dialog-titlebar-close">
                                         <span class="rzi rzi-times"></span>
                                     </a>
                                 </div>
@@ -180,7 +179,7 @@
                                                         {
                                                             if (FilterMode == FilterMode.Simple)
                                                             {
-                                                                <button class="rz-button rz-button-md rz-button-icon-only rz-variant-flat rz-light" onclick="@($"Radzen.togglePopup(this.parentNode, '{PopupID}{column.GetFilterProperty()}')")">
+                                                                    <button aria-label="@FilterToggleAriaLabel" class="rz-button rz-button-md rz-button-icon-only rz-variant-flat rz-light" onclick="@($"Radzen.togglePopup(this.parentNode, '{PopupID}{column.GetFilterProperty()}')")">
                                                                     <i class="rzi">date_range</i>
                                                                 </button>
                                                                 var filterValue = column.GetFilterValue();
@@ -274,10 +273,10 @@
 
                                                                         </div>
                                                                         <div class="rz-date-filter-buttons">
-                                                                            <button class="rz-button rz-clear-filter" @onclick="@((args) => ClearFilter(column, true))">
+                                                                            <button title="@ClearFilterText" class="rz-button rz-clear-filter" @onclick="@((args) => ClearFilter(column, true))">
                                                                                 @ClearFilterText
                                                                             </button>
-                                                                            <button class="rz-button rz-apply-filter" @onclick="@((args) => ApplyFilter(column, true))">
+                                                                            <button title="@ApplyFilterText" class="rz-button rz-apply-filter" @onclick="@((args) => ApplyFilter(column, true))">
                                                                                 @ApplyFilterText
                                                                             </button>
                                                                         </div>
@@ -349,7 +348,7 @@
                         else
                         {
                             <tr class=" rz-datatable-emptymessage-row" @onkeydown:stopPropagation>
-                                <td class="rz-datatable-emptymessage" colspan="@(visibleColumns.Sum(c => c.GetColSpan()) + (Template != null && ShowExpandColumn ? 1 : 0))">
+                                <td class="rz-datatable-emptymessage" colspan="@(visibleColumns.Sum(c => c.GetColSpan()) + (Template != null && ShowExpandColumn ? 1 : 0) + Groups.Count)">
                                     @if (EmptyTemplate != null)
                                     {
                                         @EmptyTemplate
@@ -462,13 +461,13 @@
             var cellAttributes = new Dictionary<string, object>(Attributes);
 
             var rowspan = column.GetRowSpan(true);
-            if(rowspan != 1)
+            if(rowspan > 1)
             {
                 SetAttribute(cellAttributes, "rowspan", rowspan);
             }
 
             var colspan = column.GetColSpan(true);
-            if(colspan != 1)
+            if(colspan > 1)
             {
                 SetAttribute(cellAttributes, "colspan", colspan);
             }
@@ -479,7 +478,7 @@
                 SetAttribute(cellAttributes, "style", cellStyle);
             }
 
-            var cellClass = GetCellCssClass(column, Attributes);
+            var cellClass = GetCellCssClass(column, Item, Attributes);
             if (!string.IsNullOrEmpty(cellClass))
             {
                 SetAttribute(cellAttributes, "class", cellClass);
@@ -530,7 +529,7 @@
                     @if (this.LoadChildData.HasDelegate && this.ShowExpandColumn && this.allColumns.IndexOf(column) == 0)
                     {
                         <span class="rz-cell-toggle">
-                            <a aria-label="@ExpandChildItemAriaLabel" class="@(getExpandIconCssClass(this, Item))" style="@(getExpandIconStyle(this, Item, rowArgs.Item1.Expandable))" @onclick:preventDefault="true" @onclick="_ => this.ExpandItem(Item)" @onclick:stopPropagation>
+                            <a id="@(GetId() + "exp")" aria-label="@ExpandChildItemAriaLabel" class="@(getExpandIconCssClass(this, Item))" style="@(getExpandIconStyle(this, Item, rowArgs.Item1.Expandable))" @onclick:preventDefault="true" @onclick="_ => this.ExpandItem(Item)" @onclick:stopPropagation>
                                 <span class="@(this.ExpandedItemStyle(Item))"></span>
                             </a>
                             <span class="rz-cell-data" @attributes="@spanAttributes">
@@ -557,7 +556,7 @@
                         <span class="rz-cell-data" @attributes="@spanAttributes">
                             @if (Item != null)
                             {
-                                @if (this.IsRowInEditMode(Item) && column.EditTemplate != null)
+                                @if ((column.IsInEditMode(column.Property, Item) || this.IsRowInEditMode(Item)) && column.EditTemplate is not null)
                                 {
                                     @column.EditTemplate(Item)
                                 }
@@ -581,7 +580,7 @@
                     @RenderCell(c, Item, this.CellAttributes(Item, c), rowArgs, RowIndex)
                 }
             }
-        </text>
+            </text>
         };
     }
 
@@ -597,18 +596,23 @@
         return columnStyle;
     }
 
-    string GetCellCssClass(RadzenDataGridColumn<TItem> column, IReadOnlyDictionary<string, object> Attributes)
+    string GetCellCssClass(RadzenDataGridColumn<TItem> column, TItem item, IReadOnlyDictionary<string, object> Attributes)
     {
-        var CssClass = column.CssClass + " " + getFrozenColumnClass(column, columns.Where(c => c.GetVisible()).ToList()) + " " + getCompositeCellCSSClass(column);
-
-        if (Attributes != null && Attributes.TryGetValue("class", out var @class) && !string.IsNullOrEmpty(Convert.ToString(@class)))
+        List<string> classes = [
+            column.CalculatedCssClass?.Invoke(column, item) ?? string.Empty,
+            column.CssClass,
+            getFrozenColumnClass(column, columns.Where(c => c.GetVisible()).ToList()),
+            getCompositeCellCSSClass(column),
+        ];
+        
+        if (Attributes?.TryGetValue("class", out var attributeClass) is true)
         {
-            return $"{CssClass} {@class}".Trim();
+            classes.Add(Convert.ToString(attributeClass));
         }
 
-        return String.IsNullOrWhiteSpace(CssClass) ? null : CssClass;
+        var result = string.Join(" ", classes.Where(c => !string.IsNullOrWhiteSpace(c)));
+        return !String.IsNullOrWhiteSpace(result) ? result : null;
     }
-
 
     async Task OnContextMenu(RadzenDataGridColumn<TItem> Column, TItem Item, MouseEventArgs args)
     {

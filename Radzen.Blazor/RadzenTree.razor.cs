@@ -120,6 +120,13 @@ namespace Radzen.Blazor
         [Parameter]
         public Action<TreeItemRenderEventArgs> ItemRender { get; set; }
 
+        /// <summary>
+        /// Gets or sets the context menu callback.
+        /// </summary>
+        /// <value>The context menu callback.</value>
+        [Parameter]
+        public EventCallback<TreeItemContextMenuEventArgs> ItemContextMenu { get; set; }
+
         internal Tuple<Radzen.TreeItemRenderEventArgs, IReadOnlyDictionary<string, object>> ItemAttributes(RadzenTreeItem item)
         {
             var args = new TreeItemRenderEventArgs() { Data = item.GetAllChildValues(), Value = item.Value };
@@ -250,7 +257,9 @@ namespace Radzen.Blazor
                 {
                     if (text == null)
                     {
-                        text = level.Text ?? Getter<string>(data, level.TextProperty);
+                        text = level.Text ?? 
+                            (!string.IsNullOrEmpty(level.TextProperty) ? Getter<string>(data, level.TextProperty) : null) ??
+                            (o => "");
                     }
 
                     RenderTreeItem(builder, data, level.Template, text, level.HasChildren, level.Expanded, level.Selected);
