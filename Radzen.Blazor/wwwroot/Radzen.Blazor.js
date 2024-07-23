@@ -21,6 +21,9 @@ var rejectCallbacks = [];
 var radzenRecognition;
 
 window.Radzen = {
+    isRTL: function (el) {
+        return el && getComputedStyle(el).direction == 'rtl';
+    },
     throttle: function (callback, delay) {
         var timeout = null;
         return function () {
@@ -196,7 +199,7 @@ window.Radzen = {
     script.src =
       'https://maps.googleapis.com/maps/api/js?' +
       (apiKey ? 'key=' + apiKey + '&' : '') +
-      'callback=rz_map_init';
+      'callback=rz_map_init&libraries=marker';
 
     script.async = true;
     script.defer = true;
@@ -265,16 +268,19 @@ window.Radzen = {
                 Radzen[id].instance.markers = [];
 
                 markers.forEach(function (m) {
-                    var marker = new this.google.maps.Marker({
+                    var content = document.createElement('span');
+                    content.innerHTML = m.label;
+
+                    var marker = new this.google.maps.marker.AdvancedMarkerElement({
                         position: m.position,
                         title: m.title,
-                        label: m.label
+                        content: content
                     });
 
                     marker.addListener('click', function (e) {
                         Radzen[id].invokeMethodAsync('RadzenGoogleMap.OnMarkerClick', {
                             Title: marker.title,
-                            Label: marker.label,
+                            Label: marker.content.innerText,
                             Position: marker.position
                         });
                     });
@@ -444,7 +450,8 @@ window.Radzen = {
         e.targetTouches && e.targetTouches[0]
           ? e.targetTouches[0].pageX - e.target.getBoundingClientRect().left
           : e.pageX - handle.getBoundingClientRect().left;
-      var percent = (handle.offsetLeft + offsetX) / parent.offsetWidth;
+      var percent = (Radzen.isRTL(handle) ? parent.offsetWidth - handle.offsetLeft - offsetX
+            : handle.offsetLeft + offsetX) / parent.offsetWidth;
 
       if (percent > 1) {
           percent = 1;
@@ -1009,7 +1016,7 @@ window.Radzen = {
       var input = el.querySelector('.rz-inputtext');
       if (input) {
           input.onclick = function (e) {
-              handler(e, e.currentTarget.classList.contains('rz-readonly'));
+              handler(e, e.currentTarget.classList.contains('rz-readonly') || e.currentTarget.classList.contains('rz-input-trigger') );
           };
       }
   },
@@ -1370,8 +1377,43 @@ window.Radzen = {
                 Radzen.dialogResizer = new ResizeObserver(dialogResize).observe(lastDialog.parentElement);
             }
 
+            if (options.draggable) {
+                var dialogTitle = lastDialog.parentElement.querySelector('.rz-dialog-titlebar');
+                if (dialogTitle) {
+                    var start = function (e) {
+                        var rect = lastDialog.parentElement.getBoundingClientRect();
+                        var offsetX = e.clientX - rect.left;
+                        var offsetY = e.clientY - rect.top;
+
+                        var move = function (e) {
+                            lastDialog.parentElement.style.left = e.clientX - offsetX + 'px';
+                            lastDialog.parentElement.style.top = e.clientY - offsetY + 'px';
+                        };
+
+                        var stop = function () {
+                            document.removeEventListener('mousemove', move);
+                            document.removeEventListener('mouseup', stop);
+
+                            dialog.invokeMethodAsync(
+                                'RadzenDialog.OnDrag',
+                                lastDialog.parentElement.style.top,
+                                lastDialog.parentElement.style.left
+                            );
+                        };
+
+                        document.addEventListener('mousemove', move);
+                        document.addEventListener('mouseup', stop);
+                    };
+
+                    dialogTitle.addEventListener('mousedown', start);
+                }
+            }
+
             if (options.autoFocusFirstElement) {
-                if (lastDialog.querySelectorAll('.rz-html-editor-content').length) {
+                var focusable = Radzen.getFocusableElements(lastDialog);
+                var editor = lastDialog.querySelector('.rz-html-editor');
+
+                if (editor && !focusable.includes(editor.previousElementSibling)) {
                     var editable = lastDialog.querySelector('.rz-html-editor-content');
                     if (editable) {
                         var selection = window.getSelection();
@@ -1427,12 +1469,12 @@ window.Radzen = {
         var firstFocusable = focusable[0];
         var lastFocusable = focusable[focusable.length - 1];
 
-        if (firstFocusable && e.shiftKey && document.activeElement === firstFocusable) {
-            e.preventDefault();
-            firstFocusable.focus();
-        } else if (lastFocusable && !e.shiftKey && document.activeElement === lastFocusable) {
+        if (firstFocusable && lastFocusable && e.shiftKey && document.activeElement === firstFocusable) {
             e.preventDefault();
             lastFocusable.focus();
+        } else if (firstFocusable && lastFocusable && !e.shiftKey && document.activeElement === lastFocusable) {
+            e.preventDefault();
+            firstFocusable.focus();
         }
     }
   },
@@ -1540,7 +1582,7 @@ window.Radzen = {
 
     return readAsDataURL(fileInput);
   },
-  toggleMenuItem: function (target, event, defaultActive) {
+  toggleMenuItem: function (target, event, defaultActive, clickToOpen) {
     var item = target.closest('.rz-navigation-item');
 
     var active = defaultActive != undefined ? defaultActive : !item.classList.contains('rz-navigation-item-active');
@@ -1563,6 +1605,10 @@ window.Radzen = {
         icon.style.transform = 'rotate(' + deg + ')';
       }
     }
+
+    if (clickToOpen === false && item.parentElement && item.parentElement.closest('.rz-navigation-item') && !defaultActive) {
+        return;
+    };
 
     toggle(active);
 
@@ -1875,7 +1921,7 @@ window.Radzen = {
     }
     return attributes.reduce(function (result, name) {
       if (target) {
-        result[name] = target[name];
+        result[name] = target[name].toString();
       }
       return result;
     }, { innerText: selection.toString(), innerHTML: innerHTML });
@@ -2026,7 +2072,7 @@ window.Radzen = {
           },
           mouseMoveHandler: function (e) {
               if (Radzen[el]) {
-                  var widthFloat = (Radzen[el].width - (Radzen[el].clientX - e.clientX));
+                  var widthFloat = (Radzen[el].width - (Radzen.isRTL(cell) ? -1 : 1) * (Radzen[el].clientX - e.clientX));
                   var minWidth = parseFloat(cell.style.minWidth || 0)
 
                   if (widthFloat < minWidth) {
@@ -2157,7 +2203,7 @@ window.Radzen = {
                     var spaceLength = Radzen[el].paneLength + Radzen[el].paneNextLength;
 
                     var length = (Radzen[el].paneLength -
-                        (Radzen[el].clientPos - (isHOrientation ? e.clientX : e.clientY)));
+                        (isHOrientation && Radzen.isRTL(e.target) ? -1 : 1) * (Radzen[el].clientPos - (isHOrientation ? e.clientX : e.clientY)));
 
                     if (length > spaceLength)
                         length = spaceLength;

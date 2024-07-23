@@ -10,15 +10,15 @@
     <Columns>
         <RadzenDataGridColumn Title="Employee" Frozen="true" Sortable="false" Filterable="false" Width="300px">
             <Template Context="data">
-                <RadzenImage Path="@data.Photo" class="rz-gravatar me-1" AlternateText="@(data.FirstName + " " + data.LastName)" />
+                <RadzenImage Path="@data.Photo" class="rz-gravatar rz-me-1" AlternateText="@(data.FirstName + " " + data.LastName)" />
                 <strong>@data.TitleOfCourtesy @data.FirstName @data.LastName</strong>
             </Template>
         </RadzenDataGridColumn>
-        <RadzenDataGridColumn Property="Title" Title="Job Title" Width="240px" />
-        <RadzenDataGridColumn Property="HireDate" Title="Hire Date" FormatString="{0:d}" Width="160px" />
-        <RadzenDataGridColumn Property="City" Title="City" Width="200px" />
-        <RadzenDataGridColumn Property="HomePhone" Title="Home Phone" Width="200px" />
-        <RadzenDataGridColumn Property="Extension" Title="Extension" />
+        <RadzenDataGridColumn Property="@nameof(Employee.Title)" Title="Job Title" Width="240px" />
+        <RadzenDataGridColumn Property="@nameof(Employee.HireDate)" Title="Hire Date" FormatString="{0:d}" Width="160px" />
+        <RadzenDataGridColumn Property="@nameof(Employee.City)" Title="City" Width="200px" />
+        <RadzenDataGridColumn Property="@nameof(Employee.HomePhone)" Title="Home Phone" Width="200px" />
+        <RadzenDataGridColumn Property="@nameof(Employee.Extension)" Title="Extension" />
     </Columns>
 </RadzenDataGrid>
 

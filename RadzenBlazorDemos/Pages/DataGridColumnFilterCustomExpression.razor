@@ -6,7 +6,7 @@
 }
 else
 {
-    <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H2" class="my-4">Custom filtering template with Custom Command</RadzenText>
+    <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H2" class="rz-my-6">Custom filtering template with Custom Command</RadzenText>
     <RadzenDataGrid Render="@OnRender" Style="height:400px;" AllowVirtualization="true" @ref="grid" Data=@employees FilterMode="FilterMode.Advanced"
                     AllowFiltering="true" AllowPaging="false" AllowSorting="true" ColumnWidth="200px">
         <Columns>
@@ -39,7 +39,7 @@ else
                     </div>
                 </FilterTemplate>
             </RadzenDataGridColumn>
-            <RadzenDataGridColumn Property="TitleOfCourtesy" Title="Title Of Courtesy" 
+            <RadzenDataGridColumn Property="@nameof(Employee.TitleOfCourtesy)" Title="Title Of Courtesy" 
                 FilterValue="@currentTOC">
                 <FilterTemplate>
                     <RadzenListBox @bind-Value="@currentTOC" TextProperty="Text" ValueProperty="Value" Style="width:100%;" InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "filter by title of courtesy" }})"

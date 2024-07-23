@@ -6,7 +6,7 @@
 }
 else
 {
-    <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H2" class="my-4">Custom filtering template with IQueryable binding</RadzenText>
+    <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H2" class="rz-my-6">Custom filtering template with IQueryable binding</RadzenText>
         <RadzenDataGrid @ref="grid" Data=@employees FilterMode="FilterMode.Simple" AllowFiltering="true" AllowPaging="true" AllowSorting="true" ColumnWidth="200px">
         <Columns>
             <RadzenDataGridColumn Property="ID" Title="ID" FilterValue="@idValue">
@@ -48,7 +48,7 @@ else
                     @(string.Join(',', context.WorkStatuses.Select(s => s.Name)))
                 </Template>
             </RadzenDataGridColumn>
-            <RadzenDataGridColumn Property="TitleOfCourtesy" Title="Title Of Courtesy" 
+            <RadzenDataGridColumn Property="@nameof(Employee.TitleOfCourtesy)" Title="Title Of Courtesy" 
                 FilterValue="@currentTOC">
                 <FilterTemplate>
                     <RadzenDropDown @bind-Value="@currentTOC" TextProperty="Text" ValueProperty="Value" Style="width:100%;" InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "filter by title of courtesy" }})"

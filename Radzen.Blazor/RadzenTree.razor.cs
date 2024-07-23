@@ -5,6 +5,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Emit;
 using System.Threading.Tasks;
 
 namespace Radzen.Blazor
@@ -232,16 +233,17 @@ namespace Radzen.Blazor
         [Parameter]
         public EventCallback<IEnumerable<object>> CheckedValuesChanged { get; set; }
 
-        void RenderTreeItem(RenderTreeBuilder builder, object data, RenderFragment<RadzenTreeItem> template, Func<object, string> text,
+        void RenderTreeItem(RenderTreeBuilder builder, object data, RenderFragment<RadzenTreeItem> template, Func<object, string> text, Func<object, bool> checkable,
             Func<object, bool> hasChildren, Func<object, bool> expanded, Func<object, bool> selected, IEnumerable children = null)
         {
             builder.OpenComponent<RadzenTreeItem>(0);
             builder.AddAttribute(1, nameof(RadzenTreeItem.Text), text(data));
-            builder.AddAttribute(2, nameof(RadzenTreeItem.Value), data);
-            builder.AddAttribute(3, nameof(RadzenTreeItem.HasChildren), hasChildren(data));
-            builder.AddAttribute(4, nameof(RadzenTreeItem.Template), template);
-            builder.AddAttribute(5, nameof(RadzenTreeItem.Expanded), expanded(data));
-            builder.AddAttribute(6, nameof(RadzenTreeItem.Selected), Value == data || selected(data));
+            builder.AddAttribute(2, nameof(RadzenTreeItem.Checkable), checkable(data));
+            builder.AddAttribute(3, nameof(RadzenTreeItem.Value), data);
+            builder.AddAttribute(4, nameof(RadzenTreeItem.HasChildren), hasChildren(data));
+            builder.AddAttribute(5, nameof(RadzenTreeItem.Template), template);
+            builder.AddAttribute(6, nameof(RadzenTreeItem.Expanded), expanded(data));
+            builder.AddAttribute(7, nameof(RadzenTreeItem.Selected), Value == data || selected(data));
             builder.SetKey(data);
         }
 
@@ -252,6 +254,7 @@ namespace Radzen.Blazor
             return new RenderFragment(builder =>
             {
                 Func<object, string> text = null;
+                Func<object, bool> checkable = null;
 
                 foreach (var data in children)
                 {
@@ -262,7 +265,14 @@ namespace Radzen.Blazor
                             (o => "");
                     }
 
-                    RenderTreeItem(builder, data, level.Template, text, level.HasChildren, level.Expanded, level.Selected);
+                    if (checkable == null)
+                    {
+                        checkable = level.Checkable ??
+                            (!string.IsNullOrEmpty(level.CheckableProperty) ? Getter<bool>(data, level.CheckableProperty) : null) ??
+                            (o => true);
+                    }
+
+                    RenderTreeItem(builder, data, level.Template, text, checkable, level.HasChildren, level.Expanded, level.Selected);
 
                     var hasChildren = level.HasChildren(data);
 
@@ -332,6 +342,7 @@ namespace Radzen.Blazor
                 var childContent = new RenderFragment(builder =>
                 {
                     Func<object, string> text = null;
+                    Func<object, bool> checkable = null;
                     var children = args.Children;
 
                     foreach (var data in children.Data)
@@ -341,7 +352,14 @@ namespace Radzen.Blazor
                             text = children.Text ?? Getter<string>(data, children.TextProperty);
                         }
 
-                        RenderTreeItem(builder, data, children.Template, text, children.HasChildren, children.Expanded, children.Selected);
+                        if (checkable == null)
+                        {
+                            checkable = children.Checkable ??
+                                (!string.IsNullOrEmpty(children.CheckableProperty) ? Getter<bool>(data, children.CheckableProperty) : null) ??
+                                    (o => true);
+                        }
+
+                        RenderTreeItem(builder, data, children.Template, text, checkable, children.HasChildren, children.Expanded, children.Selected);
                         builder.CloseComponent();
                     }
                 });

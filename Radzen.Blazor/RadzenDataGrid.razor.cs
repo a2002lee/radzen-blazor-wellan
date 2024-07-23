@@ -271,6 +271,14 @@ namespace Radzen.Blazor
             }
         }
 
+
+        /// <summary>
+        /// Gets or sets the callback used to load column filter data for DataGrid FilterMode.CheckBoxList filter mode.
+        /// </summary>
+        /// <value>The load filter data event callback.</value>
+        [Parameter]
+        public EventCallback<DataGridLoadColumnFilterDataEventArgs<TItem>> LoadColumnFilterData { get; set; }
+
         /// <summary>
         /// Gets or sets the load child data callback.
         /// </summary>
@@ -859,6 +867,14 @@ namespace Radzen.Blazor
                         LogicalFilterOperator = column.GetLogicalFilterOperator()
                     });
 
+                    if (FilterMode == FilterMode.CheckBoxList)
+                    {
+                        allColumns.ToList().ForEach(c =>
+                        {
+                            c.ClearFilterValues();
+                        });
+                    }
+
                     SaveSettings();
 
                     if (LoadData.HasDelegate && IsVirtualizationAllowed())
@@ -973,6 +989,14 @@ namespace Radzen.Blazor
             }
 
             column.ClearFilters();
+
+            if (FilterMode == FilterMode.CheckBoxList)
+            {
+                allColumns.ToList().ForEach(c =>
+                {
+                    c.ClearFilterValues();
+                });
+            }
 
             skip = 0;
             CurrentPage = 0;
@@ -2802,12 +2826,12 @@ namespace Radzen.Blazor
         {
             if (editedItems.Keys.Any(i => ItemEquals(i, item)))
             {
-                var editContext = editContexts[item];
+                var editContext = editContexts.FirstOrDefault(i => ItemEquals(i.Key, item)).Value;
 
-                if (editContext.Validate())
+                if (editContext?.Validate() == true)
                 {
-                    editedItems.Remove(item);
-                    editContexts.Remove(item);
+                    editedItems = editedItems.Where(i => !ItemEquals(i.Key, item)).ToDictionary(i => i.Key, i => i.Value);
+                    editContexts = editContexts.Where(i => !ItemEquals(i.Key, item)).ToDictionary(i => i.Key, i => i.Value);
 
                     if (itemsToInsert.Contains(item))
                     {
@@ -3245,7 +3269,7 @@ namespace Radzen.Blazor
                 additionalClasses.Add("rz-density-compact");
             }
 
-            return $"rz-has-paginator rz-datatable  rz-datatable-scrollable {String.Join(" ", additionalClasses)}";
+            return $"rz-has-pager rz-datatable  rz-datatable-scrollable {String.Join(" ", additionalClasses)}";
         }
 
         internal string getHeaderStyle()
@@ -3324,7 +3348,7 @@ namespace Radzen.Blazor
                         Visible = c.GetVisible(),
                         OrderIndex = c.GetOrderIndex(),
                         SortOrder = c.GetSortOrder(),
-                        SortIndex = c.getSortIndex(),
+                        SortIndex = c.GetSortIndex(),
                         FilterValue = c.GetFilterValue(),
                         FilterOperator = c.GetFilterOperator(),
                         SecondFilterValue = c.GetSecondFilterValue(),

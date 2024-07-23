@@ -80,14 +80,11 @@ namespace Radzen.Blazor
             if (!Grid.AllowCompositeDataCells && isDataCell || Columns == null)
                 return 1;
 
-            if (Parent != null)
-            {
-                return ColumnsCollection.Concat(ColumnsCollection.SelectManyRecursive(c => c.ColumnsCollection)).Sum(c => c.ColumnsCollection.Count()) +
-                    ColumnsCollection.Where(c => c.ColumnsCollection.Count() == 0).Count();
-            }
+            var span = ColumnsCollection.Concat(ColumnsCollection.SelectManyRecursive(c => c.ColumnsCollection)).Sum(c => c.ColumnsCollection.Count())
+                - ColumnsCollection.SelectManyRecursive(c => c.ColumnsCollection).Count(c => c.ColumnsCollection.Any())
+                + ColumnsCollection.Where(c => c.ColumnsCollection.Count() == 0).Count();
 
-            return ColumnsCollection.Concat(ColumnsCollection.SelectManyRecursive(c => c.ColumnsCollection)).Sum(c => c.ColumnsCollection.Count())
-                - ColumnsCollection.SelectManyRecursive(c => c.ColumnsCollection).Count(c => c.ColumnsCollection.Any());
+            return span != 0 ? span : ColumnsCollection.Count;
         }
 
         internal int GetRowSpan(bool isDataCell = false)
@@ -98,7 +95,7 @@ namespace Radzen.Blazor
             if (Columns == null && Parent != null)
             {
                 var level = this.GetLevel();
-                return level == Grid.deepestChildColumnLevel ? 1 : level + 1;
+                return level == Grid.deepestChildColumnLevel ? 1 : level < Grid.deepestChildColumnLevel ? Grid.deepestChildColumnLevel : level + 1;
             }
 
             return Columns == null && Parent == null ? Grid.deepestChildColumnLevel + 1 : 1;
@@ -129,6 +126,7 @@ namespace Radzen.Blazor
                 {
                     _filterPropertyType = typeof(IEnumerable<object>);
                     SetFilterOperator(FilterOperator.Contains);
+                    Grid.FilterPopupRenderMode = PopupRenderMode.OnDemand;
                 }
 
                 var property = GetFilterProperty();
@@ -277,7 +275,7 @@ namespace Radzen.Blazor
         [Parameter]
         public string ColumnPickerTitle
         {
-            get => _columnPickerTitle ?? Title;
+            get => _columnPickerTitle ?? Title ?? string.Empty;
             set => _columnPickerTitle = value;
         }
 
@@ -595,7 +593,7 @@ namespace Radzen.Blazor
 
             var width = GetWidthOrGridSetting()?.Trim();
 
-            if (!string.IsNullOrEmpty(width) && !isForCol)
+            if (!string.IsNullOrEmpty(width))
             {
                 style.Add($"width:{width}");
             }
@@ -630,13 +628,13 @@ namespace Radzen.Blazor
             {
                 var stackColumns = visibleFrozenColumns.Where((c, i) => visibleFrozenColumns.IndexOf(this) > i);
 
-                return GetStackedStyleForFrozen(stackColumns, "left");
+                return GetStackedStyleForFrozen(stackColumns, "inset-inline-start");
             }
             else
             {
                 var stackColumns = visibleFrozenColumns.Where((c, i) => visibleFrozenColumns.IndexOf(this) < i);
 
-                return GetStackedStyleForFrozen(stackColumns, "right");
+                return GetStackedStyleForFrozen(stackColumns, "inset-inline-end");
             }
         }
 
@@ -977,28 +975,12 @@ namespace Radzen.Blazor
             return filterValue ?? FilterValue;
         }
 
-        IEnumerable filterValues;
-        internal IEnumerable GetFilterValues()
+        internal void ClearFilterValues()
         {
-            if (filterValues == null && Grid.Data != null && !string.IsNullOrEmpty(GetFilterProperty()))
+            if (headerCell != null)
             {
-                var property = GetFilterProperty();
-                var propertyType = PropertyAccess.GetPropertyType(typeof(TItem), GetFilterProperty());
-
-                if (property.IndexOf(".") != -1)
-                {
-                    property = $"np({property})";
-                }
-
-                if (propertyType == typeof(string))
-                {
-                    property = $@"({property} == null ? """" : {property})";
-                }
-
-                filterValues = Grid.Data.AsQueryable().Select(DynamicLinqCustomTypeProvider.ParsingConfig, property).Distinct().Cast(propertyType ?? typeof(object));
+                headerCell.filterValues = null;
             }
-
-            return filterValues;
         }
 
         /// <summary>
@@ -1051,11 +1033,13 @@ namespace Radzen.Blazor
 
             if (isFirst)
             {
-                filterValue = CanSetCurrentValue(value) ? value : null;
+                filterValue = CanSetCurrentValue(value) ? value : 
+                    GetFilterOperator() == FilterOperator.IsEmpty  || GetFilterOperator() == FilterOperator.IsNotEmpty ? string.Empty : null;
             }
             else
             {
-                secondFilterValue = CanSetCurrentValue(value, false) ? value : null;
+                secondFilterValue = CanSetCurrentValue(value, false) ? value :
+                    GetSecondFilterOperator() == FilterOperator.IsEmpty || GetSecondFilterOperator() == FilterOperator.IsNotEmpty ? string.Empty : null;
             }
         }
 
@@ -1130,7 +1114,7 @@ namespace Radzen.Blazor
         /// </summary>
         public void ClearFilters()
         {
-            filterValues = null;
+            ClearFilterValues();
             SetFilterValue(null);
             SetFilterValue(null, false);
             SetFilterOperator(null);
@@ -1395,7 +1379,10 @@ namespace Radzen.Blazor
             Grid?.RemoveColumn(this);
         }
 
-        internal int? getSortIndex()
+        /// <summary>
+        /// Gets the column sort descriptor index indicating order of applied column sort in case of multiple sorting.
+        /// </summary>
+        public int? GetSortIndex()
         {
             var descriptor = Grid.sorts.Where(s => s.Property == GetSortProperty()).FirstOrDefault();
             if (descriptor != null)
@@ -1408,8 +1395,8 @@ namespace Radzen.Blazor
 
         internal string getSortIndexAsString()
         {
-            var index = getSortIndex();
-            return index != null ? $"{getSortIndex() + 1}" : "";
+            var index = GetSortIndex();
+            return index != null ? $"{GetSortIndex() + 1}" : "";
         }
 
         internal RadzenDataGridHeaderCell<TItem> headerCell;
