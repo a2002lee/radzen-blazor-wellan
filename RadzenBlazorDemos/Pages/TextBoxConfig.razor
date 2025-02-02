@@ -1,4 +1,4 @@
-﻿<RadzenRow Gap="2rem" RowGap="2rem" Class="rz-m-0 rz-m-md-12">
+﻿<RadzenRow Gap="2rem" RowGap="2rem" class="rz-m-0 rz-m-md-12">
     <RadzenColumn Size="12" SizeMD="4">
         <RadzenCard>
             <RadzenText TextStyle="TextStyle.Subtitle2" TagName="TagName.H3">Default TextBox</RadzenText>
@@ -39,6 +39,12 @@
         <RadzenCard>
             <RadzenText TextStyle="TextStyle.Subtitle2" TagName="TagName.H3">TextBox with custom AutoComplete</RadzenText>
             <RadzenTextBox autocomplete="custom" Style="width: 100%" aria-label="Custom AutoComplete TextBox" />
+        </RadzenCard>
+    </RadzenColumn>
+    <RadzenColumn Size="12" SizeMD="4">
+        <RadzenCard>
+            <RadzenText TextStyle="TextStyle.Subtitle2" TagName="TagName.H3">TextBox with predefined AutoCompleteType</RadzenText>
+            <RadzenTextBox AutoCompleteType="AutoCompleteType.Sex" Style="width: 100%" aria-label="Custom AutoComplete TextBox" />
         </RadzenCard>
     </RadzenColumn>
 </RadzenRow>

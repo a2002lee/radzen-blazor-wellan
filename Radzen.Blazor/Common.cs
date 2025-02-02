@@ -7,6 +7,7 @@ using Radzen.Blazor.Rendering;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Linq.Dynamic.Core;
 using System.Linq.Dynamic.Core.Parser;
@@ -530,6 +531,12 @@ namespace Radzen
         /// Gets the dropped item.
         /// </summary>
         public TItem ToItem { get; internal set; }
+
+        /// <summary>
+        /// The data that underlies a drag-and-drop operation, known as the drag data store.
+        /// See <see cref="DataTransfer"/>.
+        /// </summary>
+        public DataTransfer DataTransfer { get; set; } = default!;
     }
 
     /// <summary>
@@ -551,7 +558,6 @@ namespace Radzen
         /// Gets or sets a value indicating whether this item is visible.
         /// </summary>
         /// <value><c>true</c> if visible; otherwise, <c>false</c>.</value>
-        [Parameter]
         public bool Visible { get; set; } = true;
 
         /// <summary>
@@ -574,14 +580,12 @@ namespace Radzen
         /// Gets or sets a value indicating whether this item is visible.
         /// </summary>
         /// <value><c>true</c> if visible; otherwise, <c>false</c>.</value>
-        [Parameter]
         public bool Visible { get; set; } = true;
 
         /// <summary>
         /// Gets or sets a value indicating whether this item is visible.
         /// </summary>
         /// <value><c>true</c> if visible; otherwise, <c>false</c>.</value>
-        [Parameter]
         public bool Disabled { get; set; }
 
         /// <summary>
@@ -610,6 +614,34 @@ namespace Radzen
         /// Gets the DropDown.
         /// </summary>
         public RadzenListBox<TValue> ListBox { get; internal set; }
+    }
+
+    /// <summary>
+    /// Supplies information about RadzenPickList ItemRender event.
+    /// </summary>
+    public class PickListItemRenderEventArgs<TItem>
+    {
+        /// <summary>
+        /// Gets the data item.
+        /// </summary>
+        public TItem Item { get; internal set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether this item is visible.
+        /// </summary>
+        /// <value><c>true</c> if visible; otherwise, <c>false</c>.</value>
+        public bool Visible { get; set; } = true;
+
+        /// <summary>
+        /// Gets or sets a value indicating whether this item is visible.
+        /// </summary>
+        /// <value><c>true</c> if visible; otherwise, <c>false</c>.</value>
+        public bool Disabled { get; set; }
+
+        /// <summary>
+        /// Gets or sets the row HTML attributes.
+        /// </summary>
+        public IDictionary<string, object> Attributes { get; private set; } = new Dictionary<string, object>();
     }
 
     /// <summary>
@@ -758,6 +790,11 @@ namespace Radzen
         /// </summary>
         /// <value><c>true</c> if expandable; otherwise, <c>false</c>.</value>
         public bool Expandable { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating row index.
+        /// </summary>
+        public int Index { get; set; }
     }
 
     /// <summary>
@@ -935,12 +972,8 @@ namespace Radzen
     /// <summary>
     /// Represents a file which the user selects for upload via <see cref="RadzenUpload" />.
     /// </summary>
-    public class FileInfo
-#if NET5_0_OR_GREATER
-        : IBrowserFile
-#endif
+    public class FileInfo : IBrowserFile
     {
-#if NET5_0_OR_GREATER
         /// <summary>
         /// Creates FileInfo.
         /// </summary>
@@ -957,7 +990,7 @@ namespace Radzen
         {
             this.source = source;
         }
-#endif
+
         string _name;
         /// <summary>
         /// Gets the name of the selected file.
@@ -966,11 +999,7 @@ namespace Radzen
         {
             get
             {
-#if NET5_0_OR_GREATER
                 return _name ?? source.Name;
-#else
-                return _name;
-#endif
             }
             set
             {
@@ -986,11 +1015,7 @@ namespace Radzen
         {
             get
             {
-#if NET5_0_OR_GREATER
-                return _size != default(long) ? _size : source.Size;
-#else
-                return _size;
-#endif
+                return _size != default(long) ? _size : source != null ? source.Size : 0;
             }
             set
             {
@@ -998,7 +1023,6 @@ namespace Radzen
             }
         }
 
-#if NET5_0_OR_GREATER
         /// <summary>
         /// Gets the IBrowserFile.
         /// </summary>
@@ -1021,7 +1045,6 @@ namespace Radzen
         {
             return source.OpenReadStream(maxAllowedSize, cancellationToken);
         }
-#endif
     }
 
     /// <summary>
@@ -2214,6 +2237,28 @@ namespace Radzen
     }
 
     /// <summary>
+    /// Supplies information about a <see cref="RadzenDataGrid{TItem}.ColumnReordering" /> event that is being raised.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    public class DataGridColumnReorderingEventArgs<T>
+    {
+        /// <summary>
+        /// Gets the reordered RadzenDataGridColumn.
+        /// </summary>
+        public RadzenDataGridColumn<T> Column { get; internal set; }
+        /// <summary>
+        /// Gets the reordered to RadzenDataGridColumn.
+        /// </summary>
+        public RadzenDataGridColumn<T> ToColumn { get; internal set; }
+
+        /// <summary>
+        /// Gets or sets a value which will cancel the event.
+        /// </summary>
+        /// <value><c>true</c> to cancel the event; otherwise, <c>false</c>.</value>
+        public bool Cancel { get; set; }
+    }
+
+    /// <summary>
     /// Supplies information about a <see cref="RadzenDataGrid{TItem}.ColumnReordered" /> event that is being raised.
     /// </summary>
     /// <typeparam name="T"></typeparam>
@@ -2858,9 +2903,14 @@ namespace Radzen
         /// </summary>
         /// <param name="value">The value.</param>
         /// <param name="type">The type.</param>
+        /// <param name="culture">The culture.</param>
         /// <returns>System.Object</returns>
-        public static object ChangeType(object value, Type type)
+        public static object ChangeType(object value, Type type, CultureInfo culture = null)
         {
+            if (culture == null)
+            {
+                culture = CultureInfo.CurrentCulture;
+            }
             if (value == null && Nullable.GetUnderlyingType(type) != null)
             {
                 return value;
@@ -2888,7 +2938,7 @@ namespace Radzen
 
             }
 
-            return value is IConvertible ? Convert.ChangeType(value, Nullable.GetUnderlyingType(type) ?? type) : value;
+            return value is IConvertible ? Convert.ChangeType(value, Nullable.GetUnderlyingType(type) ?? type, culture) : value;
         }
     }
 
@@ -3105,7 +3155,7 @@ namespace Radzen
         {
             var type = data.GetType();
             var arg = Expression.Parameter(typeof(object));
-            var body = Expression.Property(Expression.Convert(arg, type), propertyName);
+            var body = Expression.Convert(Expression.Property(Expression.Convert(arg, type), propertyName), typeof(T));
 
             return Expression.Lambda<Func<object, T>>(body, arg).Compile();
         }
@@ -3282,6 +3332,21 @@ namespace Radzen
 
             return null;
         }
+
+        /// <summary>
+        /// Gets the dynamic property expression when binding to IDictionary.
+        /// </summary>
+        /// <param name="name">The property name.</param>
+        /// <param name="type">The property type.</param>
+        /// <returns>Dynamic property expression.</returns>
+        public static string GetDynamicPropertyExpression(string name, Type type)
+        {
+            var isEnum = type.IsEnum || Nullable.GetUnderlyingType(type)?.IsEnum == true;
+            var typeName = isEnum ? "Enum" : (Nullable.GetUnderlyingType(type) ?? type).Name;
+            var typeFunc = $@"{typeName}{(!isEnum && Nullable.GetUnderlyingType(type) != null ? "?" : "")}";
+
+            return $@"{typeFunc}(it[""{name}""])";
+        }
     }
 
     /// <summary>
@@ -3341,12 +3406,26 @@ namespace Radzen
         /// </summary>
         /// <value>The field identifier.</value>
         FieldIdentifier FieldIdentifier { get; }
-#if NET5_0_OR_GREATER
+
         /// <summary>
         /// Sets the focus.
         /// </summary>
         ValueTask FocusAsync();
-#endif
+
+        /// <summary>
+        /// Sets the Disabled state of the component
+        /// </summary>
+        bool Disabled { get; set; }
+
+        /// <summary>
+        /// Sets the Visible state of the component
+        /// </summary>
+        bool Visible { get; set; }
+
+        /// <summary>
+        /// Sets the FormFieldContext of the component
+        /// </summary>
+        IFormFieldContext FormFieldContext { get; }
     }
 
     /// <summary>

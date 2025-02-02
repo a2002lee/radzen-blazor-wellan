@@ -23,6 +23,35 @@ namespace Radzen.Blazor
     /// </example>
     public partial class RadzenAutoComplete : DataBoundFormComponent<string>
     {
+        object selectedItem = null;
+
+        /// <summary>
+        /// Gets or sets the selected item.
+        /// </summary>
+        /// <value>The selected item.</value>
+        [Parameter]
+        public object SelectedItem
+        {
+            get
+            {
+                return selectedItem;
+            }
+            set
+            {
+                if (selectedItem != value)
+                {
+                    selectedItem = object.Equals(value, "null") ? null : value;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the selected item changed.
+        /// </summary>
+        /// <value>The selected item changed.</value>
+        [Parameter]
+        public EventCallback<object> SelectedItemChanged { get; set; }
+
         /// <summary>
         /// Specifies additional custom attributes that will be rendered by the input.
         /// </summary>
@@ -232,6 +261,8 @@ namespace Radzen.Blazor
             await ValueChanged.InvokeAsync($"{Value}");
             if (FieldIdentifier.FieldName != null) { EditContext?.NotifyFieldChanged(FieldIdentifier); }
             await Change.InvokeAsync(Value);
+
+            await SelectedItemChanged.InvokeAsync(null);
         }
 
         async System.Threading.Tasks.Task SelectItem(object item)
@@ -248,6 +279,8 @@ namespace Radzen.Blazor
             await ValueChanged.InvokeAsync($"{Value}");
             if (FieldIdentifier.FieldName != null) { EditContext?.NotifyFieldChanged(FieldIdentifier); }
             await Change.InvokeAsync(Value);
+
+            await SelectedItemChanged.InvokeAsync(item);
 
             StateHasChanged();
         }
@@ -307,7 +340,21 @@ namespace Radzen.Blazor
                 shouldClose = !visible;
             }
 
+            if (parameters.DidParameterChange(nameof(SelectedItem), SelectedItem))
+            {
+                var item = parameters.GetValueOrDefault<object>(nameof(SelectedItem));
+                if (item != null)
+                { 
+                    await SelectItem(item);
+                }
+            }
+
             await base.SetParametersAsync(parameters);
+
+            if (parameters.DidParameterChange(nameof(Value), Value))
+            {
+                Value = parameters.GetValueOrDefault<object>(nameof(Value));
+            }
 
             if (shouldClose && !firstRender)
             {
@@ -315,7 +362,6 @@ namespace Radzen.Blazor
             }
         }
 
-#if NET5_0_OR_GREATER
         /// <summary>
         /// Sets the focus on the input element.
         /// </summary>
@@ -323,6 +369,5 @@ namespace Radzen.Blazor
         {
             await search.FocusAsync();
         }
-#endif
     }
 }

@@ -23,7 +23,7 @@
                 @if (sideDialogOptions.ShowClose)
                 {
                     <a id="@(sideDialogOptions.GetHashCode() + "cl")" aria-label="@CloseSideDialogAriaLabel" @onclick:preventDefault="true" class="rz-dialog-side-titlebar-close" @onclick="@(_ => Service.CloseSide(null))" role="button" tabindex="@sideDialogOptions.CloseTabIndex">
-                        <span class="rzi rzi-times"></span>
+                        <span class="notranslate rzi rzi-times"></span>
                     </a>
                 }
             </div>
@@ -144,5 +144,15 @@
         string heightStyle = string.IsNullOrEmpty(sideDialogOptions.Height) ? string.Empty : $"height: {sideDialogOptions.Height};";
 
         return $"{widthStyle}{heightStyle}{sideDialogOptions.Style}";
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+
+        if (isSideDialogOpen)
+        {
+            await JSRuntime.InvokeAsync<string>("Radzen.openSideDialog", sideDialogOptions);
+        }
     }
 }

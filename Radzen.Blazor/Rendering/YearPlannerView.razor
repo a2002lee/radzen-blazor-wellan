@@ -95,7 +95,7 @@
             </div>
             <div class="rz-slots">
                 <div @attributes=@Attributes(realstart, "rz-slot", false)>
-                    <div class="rz-slot-header" style="cursor: pointer;" @onclick=@(args => OnMonthClick(startMonth))>
+                    <div class="rz-slot-header" @onclick=@(args => OnMonthClick(startMonth))>
                         @realstart.ToString("MMM", Scheduler.Culture)
                     </div>
                 </div>
@@ -126,7 +126,7 @@
                     }
                 }
                 <div @attributes=@Attributes(realstart, "rz-slot", false)>
-                    <div class="rz-slot-header" style="cursor: pointer;" @onclick=@(args => OnMonthClick(startMonth))>
+                    <div class="rz-slot-header" @onclick=@(args => OnMonthClick(startMonth))>
                         @realstart.ToString("MMM", Scheduler.Culture)
                     </div>
                 </div>
@@ -295,9 +295,7 @@
         else if (key == "Enter")
         {
             await OnListClick(CurrentDate, AppointmentsInRange(CurrentDate, CurrentDate.AddDays(1)));
-#if NET5_0_OR_GREATER
             await view.FocusAsync();
-#endif
             preventKeyPress = true;
         }
         else if (key == "Space")
@@ -306,9 +304,7 @@
             if (appointment != null)
             {
                 await Scheduler.SelectAppointment(appointment);
-#if NET5_0_OR_GREATER
                 await view.FocusAsync();
-#endif
             }
 
             preventKeyPress = true;

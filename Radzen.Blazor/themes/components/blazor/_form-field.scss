@@ -47,13 +47,19 @@ $form-field-helper-padding: 0 0.5rem !default;
     transition: var(--rz-input-transition);
 
     & > *,
-    & > .rz-autocomplete, 
+    & > .rz-autocomplete,
+    & > .rz-autocomplete.rz-state-disabled > .rz-inputtext,
     & input,
     & .rz-inputtext,
+    & .rz-inputtext.rz-state-disabled,
     & .rz-datepicker.rz-state-disabled > .rz-inputtext {
         @extend %input-blank;
 
         flex: 1;
+    }
+    
+    & > input {
+        width: 100%;
     }
 
     .rz-form-field-start,
@@ -132,6 +138,8 @@ $form-field-helper-padding: 0 0.5rem !default;
             --rz-input-height: var(--rz-form-field-filled-height);
             --rz-input-padding-block: var(--rz-form-field-filled-padding-block);
             --rz-input-padding-inline: var(--rz-form-field-filled-padding-inline);
+            --rz-dropdown-chips-padding-block: var(--rz-form-field-filled-padding-block);
+            --rz-dropdown-chips-padding-inline: var(--rz-form-field-filled-padding-inline);
             --rz-numeric-input-padding-block: var(--rz-form-field-filled-numeric-padding-block);
             --rz-numeric-input-padding-inline: var(--rz-form-field-filled-numeric-padding-inline);
             --rz-form-field-label-floating-top: var(--rz-form-field-filled-label-floating-top);
@@ -351,6 +359,7 @@ $form-field-helper-padding: 0 0.5rem !default;
     .rz-checkbox-list-vertical ~ &,
     .rz-checkbox-list-horizontal  ~ &,
     .rz-chkbox ~ &,
+    .rz-fileupload ~ &,
     .rz-state-empty:has(.rz-placeholder) ~ & {
         inset-inline-end: auto;
         inset-block-start: var(--rz-form-field-label-floating-top);
@@ -373,6 +382,7 @@ $form-field-helper-padding: 0 0.5rem !default;
     .rz-form-field:not(.rz-variant-outlined) .rz-checkbox-list-vertical ~ &,
     .rz-form-field:not(.rz-variant-outlined) .rz-checkbox-list-horizontal  ~ &,
     .rz-form-field:not(.rz-variant-outlined) .rz-chkbox ~ &,
+    .rz-form-field:not(.rz-variant-outlined) .rz-fileupload ~ &,
     .rz-form-field:not(.rz-variant-outlined) .rz-state-empty:has(.rz-placeholder) ~ & {
         background-color: inherit !important;
     }

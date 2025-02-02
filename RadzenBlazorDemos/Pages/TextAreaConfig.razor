@@ -1,4 +1,4 @@
-﻿<RadzenRow Gap="2rem" RowGap="2rem" Class="rz-m-0 rz-m-md-12">
+﻿<RadzenRow Gap="2rem" RowGap="2rem" class="rz-m-0 rz-m-md-12">
     <RadzenColumn Size="12" SizeMD="4">
         <RadzenCard>
             <RadzenText TextStyle="TextStyle.Subtitle2" TagName="TagName.H3">TextArea</RadzenText>
@@ -13,8 +13,9 @@
     </RadzenColumn>
     <RadzenColumn Size="12" SizeMD="4">
         <RadzenCard>
-            <RadzenText TextStyle="TextStyle.Subtitle2" TagName="TagName.H3">TextArea with 5 maximum characters</RadzenText>
-            <RadzenTextArea MaxLength="5" Change=@(args => OnChange(args, "TextArea with 5 maximum characters")) Style="width: 100%" aria-label="TextArea with 5 maximum characters" />
+            <RadzenText TextStyle="TextStyle.Subtitle2" TagName="TagName.H3">TextArea with @maxLength maximum characters</RadzenText>
+            <RadzenTextArea @bind-Value=@maxLengthValue @oninput="@(args => maxLengthValue = $"{args.Value}")" MaxLength="@maxLength" Change=@(args => OnChange(args, "TextArea with 5 maximum characters")) Style="width: 100%" aria-label="TextArea with 5 maximum characters" />
+            <span style="font-style: italic;">@($"{maxLengthValue.Length}/{maxLength}")</span>
         </RadzenCard>
     </RadzenColumn>
     <RadzenColumn Size="12" SizeMD="4">
@@ -29,11 +30,20 @@
             <RadzenTextArea Disabled="true" @bind-Value=@value Cols="30" Rows="3" aria-label="Disabled TextArea with 3 rows and 30 columns" />
         </RadzenCard>
     </RadzenColumn>
+    <RadzenColumn Size="12" SizeMD="4">
+        <RadzenCard>
+            <RadzenText TextStyle="TextStyle.Subtitle2" TagName="TagName.H3">Auto-resize TextArea</RadzenText>
+            <RadzenTextArea oninput="event.target.style.height = Math.max(event.target.clientHeight, event.target.scrollHeight) + 'px';" Change=@(args => OnChange(args, "Auto-resize")) Style="width: 100%" aria-label="Auto-resize" />
+        </RadzenCard>
+    </RadzenColumn>
 </RadzenRow>
 
 <EventConsole @ref=@console />
 
 @code {
+    string maxLengthValue = "";
+    int maxLength = 5;
+
     string value;
 
     EventConsole console;

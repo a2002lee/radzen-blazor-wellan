@@ -196,6 +196,25 @@ namespace Radzen.Blazor
         [Parameter]
         public IEnumerable<object> CheckedValues { get; set; } = Enumerable.Empty<object>();
 
+        /// <summary>
+        /// Gets or sets the CSS classes added to the item content.
+        /// </summary>
+        [Parameter]
+        public string ItemContentCssClass { get; set; }
+
+        /// <summary>
+        /// Gets or sets the CSS classes added to the item icon.
+        /// </summary>
+        [Parameter]
+        public string ItemIconCssClass { get; set; }
+
+        /// <summary>
+        /// Gets or sets the CSS classes added to the item label.
+        /// </summary>
+        [Parameter]
+
+        public string ItemLabelCssClass { get; set; }
+
         internal List<RadzenTreeItem> items = new List<RadzenTreeItem>();
 
         internal void AddItem(RadzenTreeItem item)
@@ -260,7 +279,7 @@ namespace Radzen.Blazor
                 {
                     if (text == null)
                     {
-                        text = level.Text ?? 
+                        text = level.Text ??
                             (!string.IsNullOrEmpty(level.TextProperty) ? Getter<string>(data, level.TextProperty) : null) ??
                             (o => "");
                     }
@@ -326,6 +345,35 @@ namespace Radzen.Blazor
             SelectedItem?.Unselect();
             SelectedItem = null;
         }
+
+        /// <summary>
+        /// Forces the specified <paramref name="item"/> or, if
+        /// <paramref name="item"/> is <c>null</c>, all items in the tree to be
+        /// re-evaluated such that items lazily created via <see cref="Expand"/>
+        /// are realised if the underlying data model has been changed from
+        /// somewhere else.
+        /// </summary>
+        /// <param name="item">The item to be reloaded or <c>null</c> to refresh
+        /// the root nodes of the tree.</param>
+        /// <returns>A task to wait for the operation to complete.</returns>
+        public async Task Reload(RadzenTreeItem item = null) {
+            // Implementation node: I am absolute not sure whether "ExpandItem"
+            // is the "right" way to to this, but it does exactly what I need.
+            // The rationale behind the public "Reload" method is that (i) just
+            // making "ExpandItem" public would create an API that is not
+            // intuitively named and (ii) if "ExpandItem" gets changed in the
+            // future such that it cannot be used for this hack anymore, the
+            // implementation could be swapped with a different one without
+            // breaking the public API.
+            if (item == null) {
+                foreach (var i in this.items) {
+                    await this.ExpandItem(i);
+                }
+            } else {
+                await this.ExpandItem(item);
+            }
+        }
+
         internal async Task ExpandItem(RadzenTreeItem item)
         {
             var args = new TreeExpandEventArgs()

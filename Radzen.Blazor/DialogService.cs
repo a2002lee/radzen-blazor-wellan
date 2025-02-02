@@ -181,6 +181,27 @@ namespace Radzen
         }
 
         /// <summary>
+        /// Opens a side dialog with the specified arguments
+        /// </summary>
+        /// <typeparam name="T">The type of Blazor component which will be displayed in the side dialog.</typeparam>
+        /// <param name="title">The text displayed in the title bar of the side dialog.</param>
+        /// <param name="parameters">The dialog parameters. Passed as property values of <typeparamref name="T"/></param>
+        /// <param name="options">The side dialog options.</param>
+        public void OpenSide<T>(string title, Dictionary<string, object> parameters = null, SideDialogOptions options = null)
+            where T : ComponentBase
+        {
+            CloseSide();
+
+            if (options == null)
+            {
+                options = new SideDialogOptions();
+            }
+
+            options.Title = title;
+            OnSideOpen?.Invoke(typeof(T), parameters ?? new Dictionary<string, object>(), options);
+        }
+
+        /// <summary>
         /// Closes the side dialog
         /// </summary>
         /// <param name="result">The result of the Dialog</param>
@@ -189,8 +210,9 @@ namespace Radzen
             if (_sideDialogTask?.Task.IsCompleted == false)
             {
                 _sideDialogTask.TrySetResult(result);
-                OnSideClose?.Invoke(result);
             }
+
+            OnSideClose?.Invoke(result);
         }
 
         /// <summary>
@@ -512,6 +534,11 @@ namespace Radzen
         /// Whether to show a mask on the background or not
         /// </summary>
         public bool ShowMask { get; set; } = true;
+
+        /// <summary>
+        /// Gets or sets a value indicating whether to focus the first focusable HTML element. Set to <c>true</c> by default.
+        /// </summary>
+        public bool AutoFocusFirstElement { get; set; } = false;
     }
 
     /// <summary>

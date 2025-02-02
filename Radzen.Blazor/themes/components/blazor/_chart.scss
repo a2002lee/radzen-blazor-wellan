@@ -6,6 +6,10 @@ $chart-legend-focus-outline: var(--rz-outline-focus) !default;
 $chart-legend-focus-outline-offset: var(--rz-outline-offset) !default;
 $chart-tooltip-background: var(--rz-base-background-color) !default;
 $chart-tooltip-color: var(--rz-text-color) !default;
+$chart-tooltip-border-radius: var(--rz-tooltip-border-radius) !default;
+$chart-tooltip-font-size: var(--rz-tooltip-font-size) !default;
+$chart-tooltip-item-border-radius: var(--rz-border-radius) !default;
+$chart-tooltip-item-hover-background-color: var(--rz-grid-stripe-background-color) !default;
 $chart-marker-stroke: var(--rz-base-background-color) !default;
 
 $chart-color-schemes: (
@@ -140,10 +144,6 @@ $chart-color-schemes: (
   }
 }
 
-.rz-category-axis .rz-tick-text {
-  text-anchor: middle;
-}
-
 .rz-axis .rz-axis-title {
   stroke: none;
   text-anchor: middle;
@@ -208,8 +208,8 @@ $chart-color-schemes: (
 .rz-legend-item {
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin: 4px;
+  gap: 0.25rem;
+  margin: 0.25rem;
   cursor: pointer;
 
   &:focus {
@@ -230,39 +230,110 @@ $chart-color-schemes: (
 
 .rz-chart-tooltip {
   position: absolute;
-  transform: translate(-50%, -100%);
-  transition: top 0.2s, left 0.2s;
   top: 0;
   left: 0;
+}
+
+.rz-top-chart-tooltip  {
+  transform: translate(-50%, -100%);
+}
+
+.rz-bottom-chart-tooltip {
+  transform: translate(-50%, 0);
 }
 
 .rz-chart-tooltip-content {
   background: var(--rz-chart-tooltip-background);
   color: var(--rz-chart-tooltip-color);
   box-shadow: 0 6px 14px 0 rgba(0, 0, 0, 0.15);
-  padding: 0.25rem 0.5rem;
-  border-radius: var(--rz-border-radius);
+  padding: 0.5rem;
+  border-radius: var(--rz-chart-tooltip-border-radius);
   white-space: nowrap;
+  font-size: var(--rz-chart-tooltip-font-size);
 }
-
 
 .rz-chart-tooltip {
   &:not(.rz-pie-tooltip) {
     .rz-chart-tooltip-content {
-      margin-bottom: 15px;
       &:after {
         content: ' ';
         position: absolute;
         width: 8px;
         height: 8px;
-        left: 50%;
-        bottom: 0;
         background-color: inherit;
         transform-origin: center;
+      }
+    }
+  }
+}
+
+.rz-top-chart-tooltip {
+  &:not(.rz-pie-tooltip) {
+    .rz-chart-tooltip-content {
+      margin-bottom: 15px;
+      &:after {
+        left: 50%;
+        bottom: 0;
         transform: translate(-50%, -11px) rotate(45deg);
         border-bottom: inherit;
         border-right: inherit;
       }
     }
   }
+}
+
+.rz-bottom-chart-tooltip {
+  &:not(.rz-pie-tooltip) {
+    .rz-chart-tooltip-content {
+      margin-top: 15px;
+      &:after {
+        left: 50%;
+        top: 0;
+        transform: translate(-50%, 11px) rotate(45deg);
+        border-top: inherit;
+        border-left: inherit;
+      }
+    }
+  }
+}
+
+.rz-chart-tooltip-title {
+  font-weight: 700;
+}
+
+.rz-chart-tooltip-item-value {
+  font-weight: 600;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+// Shared Tooltip Styles
+
+.rz-chart-shared-tooltip:has(.rz-chart-tooltip-item-content) {
+  .rz-chart-tooltip-title {
+    padding: 0 0.5rem;
+  }
+
+  .rz-chart-tooltip-content {
+    border: none;
+  }
+}
+
+.rz-chart-tooltip-item-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: var(--rz-chart-tooltip-item-border-radius);
+
+    &:hover {
+      background-color: var(--rz-chart-tooltip-item-hover-background-color);
+    }
+
+  .rz-legend-item {
+    margin: 0;
+    cursor: inherit;
+  }
+
 }

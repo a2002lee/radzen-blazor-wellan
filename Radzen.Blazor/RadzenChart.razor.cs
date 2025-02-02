@@ -52,17 +52,39 @@ namespace Radzen.Blazor
         /// </summary>
         [Parameter]
         public EventCallback<LegendClickEventArgs> LegendClick { get; set; }
-        double? Width { get; set; }
+        
+        [Inject]
+        TooltipService TooltipService { get; set; }
 
-        double? Height { get; set; }
+        /// <summary>
+        /// Gets the runtime width of the chart.
+        /// </summary>
+        protected double? Width { get; set; }
 
-        double MarginTop { get; set; }
+        /// <summary>
+        /// Gets the runtime height of the chart.
+        /// </summary>
+        protected double? Height { get; set; }
 
-        double MarginLeft { get; set; }
+        /// <summary>
+        /// Gets or sets the top margin of the plot area.
+        /// </summary>
+        protected double MarginTop { get; set; }
 
-        double MarginRight { get; set; }
+        /// <summary>
+        /// Gets or sets the left margin of the plot area.
+        /// </summary>
+        protected double MarginLeft { get; set; }
 
-        double MarginBottom { get; set; }
+        /// <summary>
+        /// Gets or sets the right margin of the plot area.
+        /// </summary>
+        protected double MarginRight { get; set; }
+
+        /// <summary>
+        /// Gets or sets the bottom margin of the plot area.
+        /// </summary>
+        protected double MarginBottom { get; set; }
 
         /// <summary>
         /// Gets or sets the child content. Used to specify series and other configuration.
@@ -93,7 +115,11 @@ namespace Radzen.Blazor
             Series.Remove(series);
         }
 
-        private bool ShouldRenderAxes()
+        /// <summary>
+        /// Returns whether the chart should render axes.
+        /// </summary>
+        /// <returns></returns>
+        protected bool ShouldRenderAxes()
         {
             var pieType = typeof(RadzenPieSeries<>);
             var donutType = typeof(RadzenDonutSeries<>);
@@ -111,7 +137,11 @@ namespace Radzen.Blazor
             return Series.Count > 0 && Series.All(series => series is IChartBarSeries);
         }
 
-        private bool UpdateScales()
+        /// <summary>
+        /// Updates the scales based on the configuration.
+        /// </summary>
+        /// <returns></returns>
+        protected virtual bool UpdateScales()
         {
             var valueScale = ValueScale;
             var categoryScale = CategoryScale;
@@ -249,7 +279,6 @@ namespace Radzen.Blazor
             }
         }
 
-        ChartTooltipContainer chartTooltipContainer;
         RenderFragment tooltip;
         object tooltipData;
         double mouseX;
@@ -309,7 +338,7 @@ namespace Radzen.Blazor
                         if (squaredDistance < closestSeriesDistanceSquared)
                         {
                             closestSeries = series;
-                            closestSeriesData = seriesData; 
+                            closestSeriesData = seriesData;
                             closestSeriesDistanceSquared = squaredDistance;
                         }
                     }
@@ -340,11 +369,15 @@ namespace Radzen.Blazor
                     {
                         foreach (var overlay in series.Overlays.Reverse())
                         {
-                            if (overlay.Visible && overlay.Contains(mouseX - MarginLeft, mouseY - MarginTop, TooltipTolerance))
+                            if (overlay.Visible && overlay.Contains(queryX, queryY, TooltipTolerance))
                             {
                                 tooltipData = null;
-                                tooltip = overlay.RenderTooltip(mouseX, mouseY, MarginLeft, MarginTop);
-                                chartTooltipContainer.Refresh();
+                                tooltip = overlay.RenderTooltip(queryX, queryY);
+                                var tooltipPosition = overlay.GetTooltipPosition(queryX, queryY);
+                                TooltipService.OpenChartTooltip(Element, tooltipPosition.X + MarginLeft, tooltipPosition.Y + MarginTop, _ => tooltip, new ChartTooltipOptions
+                                {
+                                    ColorScheme = ColorScheme
+                                });
                                 await Task.Yield();
 
                                 return;
@@ -360,7 +393,7 @@ namespace Radzen.Blazor
                             if (squaredDistance < closestSeriesDistanceSquared)
                             {
                                 closestSeries = series;
-                                closestSeriesData = seriesData; 
+                                closestSeriesData = seriesData;
                                 closestSeriesDistanceSquared = squaredDistance;
                             }
                         }
@@ -370,23 +403,27 @@ namespace Radzen.Blazor
                 if (closestSeriesData != null)
                 {
                     if (closestSeriesData != tooltipData)
-                    { 
+                    {
                         tooltipData = closestSeriesData;
-                        tooltip = closestSeries.RenderTooltip(closestSeriesData, MarginLeft, MarginTop, Height ?? 0);
-                        chartTooltipContainer.Refresh();
+                        tooltip = closestSeries.RenderTooltip(closestSeriesData);
+                        var tooltipPosition = closestSeries.GetTooltipPosition(closestSeriesData);
+                        TooltipService.OpenChartTooltip(Element, tooltipPosition.X + MarginLeft, tooltipPosition.Y + MarginTop, _ => tooltip, new ChartTooltipOptions
+                        {
+                            ColorScheme = ColorScheme
+                        });
                         await Task.Yield();
                     }
                     return;
                 }
+            }
 
-                if (tooltip != null)
-                {
-                    tooltipData = null;
-                    tooltip = null;
+            if (tooltip != null)
+            {
+                tooltipData = null;
+                tooltip = null;
 
-                    chartTooltipContainer.Refresh();
-                    await Task.Yield();
-                }
+                TooltipService.Close();
+                await Task.Yield();
             }
         }
 

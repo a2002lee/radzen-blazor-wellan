@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
-
+using Microsoft.AspNetCore.Components.Web;
 using Radzen.Blazor;
 using Radzen.Blazor.Rendering;
 
@@ -392,13 +392,12 @@ namespace Radzen
                                                                        .AddDisabled(Disabled)
                                                                        .Add(FieldIdentifier, EditContext)
                                                                        .Add("rz-state-empty", !HasValue);
-#if NET5_0_OR_GREATER
+
         /// <inheritdoc/>
         public virtual async ValueTask FocusAsync()
         {
             await Element.FocusAsync();
         }
-#endif
 
         /// <summary> Provides support for RadzenFormField integration. </summary>
         [CascadingParameter]
@@ -406,5 +405,20 @@ namespace Radzen
 
         /// <summary> Gets the current placeholder. Returns empty string if this component is inside a RadzenFormField.</summary>
         protected string CurrentPlaceholder => FormFieldContext?.AllowFloatingLabel == true ? " " : Placeholder;
+
+        /// <summary>
+        /// Handles the <see cref="E:ContextMenu" /> event.
+        /// </summary>
+        /// <param name="args">The <see cref="MouseEventArgs"/> instance containing the event data.</param>
+        /// <returns>Task.</returns>
+        public override Task OnContextMenu(MouseEventArgs args)
+        {
+            if (!Disabled)
+            {
+                return base.OnContextMenu(args);
+            }
+
+            return Task.CompletedTask;
+        }
     }
 }

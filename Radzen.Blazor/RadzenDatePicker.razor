@@ -15,16 +15,16 @@
         {
             <input @ref="@input" @attributes="InputAttributes" disabled="@Disabled" readonly="@IsReadonly" value="@FormattedValue" tabindex="@(Disabled ? "-1" : $"{TabIndex}")"
                     @onchange="@ParseDate" autocomplete="off" type="text" name="@Name" @onkeydown="@(args => OnKeyPress(args))" @onkeydown:preventDefault=preventKeyPress @onkeydown:stopPropagation
-                   class="rz-inputtext @InputClass @(IsReadonly ? "rz-readonly" : "") @(!ShowButton ? "rz-input-trigger" : "")" id="@Name" placeholder="@Placeholder" />
+                   class="rz-inputtext @InputClass @(ReadOnly ? "rz-readonly" : "") @(!ShowButton ? "rz-input-trigger" : "")" id="@Name" placeholder="@Placeholder" />
             @if (ShowButton)
             {
-                <button aria-label="@ToggleAriaLabel" @onmousedown=@OnToggle class="@($"rz-datepicker-trigger rz-button rz-button-icon-only{(Disabled ? " rz-state-disabled" : "")}")" tabindex="-1" type="button">
+                <button aria-label="@ToggleAriaLabel" @onmousedown=@OnToggle class="@($"rz-datepicker-trigger rz-button rz-button-icon-only{(Disabled ? " rz-state-disabled" : "")} {ButtonClass}")" tabindex="-1" type="button">
                     <span aria-hidden="true" class="@ButtonClasses"></span><span class="rz-button-text"></span>
                 </button>
             }
             @if (AllowClear && HasValue)
             {
-                <i class="rz-dropdown-clear-icon rzi rzi-times" @onclick="@Clear" @onclick:stopPropagation="true"></i>
+                <i class="notranslate rz-dropdown-clear-icon rzi rzi-times" @onclick="@Clear" @onclick:stopPropagation="true"></i>
             }
         }
 
@@ -34,18 +34,22 @@
                     {
                         <div class="rz-calendar-header">
                             <a id="@(GetId() + "pm")" tabindex="-1" aria-label="@PrevMonthAriaLabel" @onclick:preventDefault="true" class="rz-button rz-button-md rz-variant-text rz-button-icon-only rz-secondary rz-shade-default rz-calendar-prev" @onclick="@(async () => { if (!Disabled) { try { if(CurrentDate.AddMonths(-1).Year >= YearFrom) {CurrentDate = CurrentDate.AddMonths(-1);}} catch (ArgumentOutOfRangeException) {}} })">
-                                <span class="rzi rz-calendar-prev-icon"></span>
+                                <span class="notranslate rzi rz-calendar-prev-icon"></span>
                             </a>
                             <a id="@(GetId() + "nm")" tabindex="-1" aria-label="@NextMonthAriaLabel" @onclick:preventDefault="true" class="rz-button rz-button-md rz-variant-text rz-button-icon-only rz-secondary rz-shade-default rz-calendar-next" @onclick="@(async () => { if (!Disabled) { try { if(CurrentDate.AddMonths(1).Year <= YearTo) {CurrentDate = CurrentDate.AddMonths(1);}} catch (ArgumentOutOfRangeException) {} } })">
-                                <span class="rzi rz-calendar-next-icon"></span>
+                                <span class="notranslate rzi rz-calendar-next-icon"></span>
                             </a>
                             <div class="rz-calendar-title">
-                                <RadzenDropDown @ref="monthDropDown" Class="rz-calendar-month-dropdown" TabIndex="@TabIndex"
+                                <RadzenDropDown @ref="monthDropDown" class="rz-calendar-month-dropdown" TabIndex="@TabIndex"
                                                 TValue="int" Value="@CurrentDate.Month" Disabled="@Disabled" Data="@months" TextProperty="Name" ValueProperty="Value"
                                                 Change="@((args) => { SetMonth(int.Parse(args.ToString())); })"/>
-                                <RadzenDropDown @ref="yearDropDown" Class="rz-calendar-year-dropdown" TabIndex="@TabIndex"
+                                <RadzenDropDown @ref="yearDropDown" class="rz-calendar-year-dropdown" TabIndex="@TabIndex"
                                                 TValue="int" Value="@CurrentDate.Year" Disabled="@Disabled" Data="@years" TextProperty="Name" ValueProperty="Value"
-                                                Change="@((args) => { SetYear(int.Parse(args.ToString())); })"/>
+                                                Change="@((args) => { SetYear(int.Parse(args.ToString())); })">
+                                        <Template>
+                                            @Culture.Calendar.GetYear(new DateTime(context.Value,1,1))
+                                        </Template>
+                                </RadzenDropDown>
                             </div>
                         </div>
                         @if(ShowDays)
@@ -131,18 +135,18 @@
                         {
                             <div class="rz-ampm-picker">
                                 <a id="@(GetId() + "ampmup")" tabindex="@(Disabled ? "-1" : $"{TabIndex}")" aria-label="@ToggleAmPmAriaLabel" @onclick:preventDefault="true" @onclick="@ToggleAmPm">
-                                    <span class="rzi rzi-chevron-up"></span>
+                                    <span class="notranslate rzi rzi-chevron-up"></span>
                                 </a>
                                 <span>@CurrentDate.ToString("tt")</span>
                                 <a id="@(GetId() + "ampmdown")" tabindex="@(Disabled ? "-1" : $"{TabIndex}")" aria-label="@ToggleAmPmAriaLabel" @onclick:preventDefault="true" @onclick="@ToggleAmPm">
-                                    <span class="rzi rzi-chevron-down"></span>
+                                    <span class="notranslate rzi rzi-chevron-down"></span>
                                 </a>
                             </div>
                         }
                         @if (ShowTimeOkButton)
                         {
-                            <button aria-label="@OkAriaLabel" type="button" class="rz-button rz-button-md rz-secondary" tabindex="0" @onclick="@OkClick">
-                                <span class="rz-button-text">Ok</span>
+                            <button aria-label="@OkAriaLabel" type="button" class="rz-button rz-button-md rz-secondary" tabindex="0" @onclick="@(args => OkClick())">
+                                <span class="rz-button-text">@OkAriaLabel</span>
                             </button>
                         }
                     </div>

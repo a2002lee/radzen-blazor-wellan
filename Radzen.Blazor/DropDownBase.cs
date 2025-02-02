@@ -17,7 +17,6 @@ namespace Radzen
     /// <typeparam name="T"></typeparam>
     public class DropDownBase<T> : DataBoundFormComponent<T>
     {
-#if NET5_0_OR_GREATER
         /// <summary>
         /// Gets or sets a value that determines how many additional items will be rendered before and after the visible region. This help to reduce the frequency of rendering during scrolling. However, higher values mean that more elements will be present in the page.
         /// </summary>
@@ -78,27 +77,19 @@ namespace Radzen
         /// </summary>
         [Parameter]
         public int PageSize { get; set; } = 5;
-#endif
+
         /// <summary>
         /// Determines whether virtualization is allowed.
         /// </summary>
         /// <returns><c>true</c> if virtualization is allowed; otherwise, <c>false</c>.</returns>
         internal bool IsVirtualizationAllowed()
         {
-#if NET5_0_OR_GREATER
             return AllowVirtualization;
-#else
-            return false;
-#endif
         }
 
         internal int GetVirtualizationOverscanCount()
         {
-#if NET5_0_OR_GREATER
             return VirtualizationOverscanCount;
-#else
-            return 0;
-#endif
         }
 
         /// <summary>
@@ -109,7 +100,6 @@ namespace Radzen
         {
             return new RenderFragment(builder =>
             {
-#if NET5_0_OR_GREATER
                 if (AllowVirtualization)
                 {
                     builder.OpenComponent(0, typeof(Microsoft.AspNetCore.Components.Web.Virtualization.Virtualize<object>));
@@ -138,12 +128,6 @@ namespace Radzen
                         RenderItem(builder, item);
                     }
                 }
-#else
-                foreach (var item in LoadData.HasDelegate ? Data : View)
-                {
-                    RenderItem(builder, item);
-                }
-#endif
             });
         }
 
@@ -288,7 +272,7 @@ namespace Radzen
         /// <summary>
         /// The selected items
         /// </summary>
-        protected IList<object> selectedItems = new List<object>();
+        protected ISet<object> selectedItems = new HashSet<object>();
         /// <summary>
         /// The selected item
         /// </summary>
@@ -304,10 +288,10 @@ namespace Radzen
                 return;
             }
 
-            if (selectedItems.Count != View.Cast<object>().ToList().Where(i => disabledPropertyGetter != null ? disabledPropertyGetter(i) as bool? != true : true).Count())
+            if (selectedItems.Count != View.Cast<object>().ToList().Where(i => disabledPropertyGetter == null || disabledPropertyGetter(i) as bool? != true).Count())
             {
                 selectedItems.Clear();
-                selectedItems = View.Cast<object>().ToList().Where(i => disabledPropertyGetter != null ? disabledPropertyGetter(i) as bool? != true : true).ToList();
+                selectedItems = View.Cast<object>().ToList().Where(i => disabledPropertyGetter == null || disabledPropertyGetter(i) as bool? != true).ToHashSet(ItemComparer);
             }
             else
             {
@@ -452,7 +436,11 @@ namespace Radzen
 
                 if (type == typeof(object) && typeof(EnumerableQuery).IsAssignableFrom(query.GetType()) && query.Any())
                 {
-                    type = query.FirstOrDefault().GetType();
+                    var firstElement = query.Cast<object>().FirstOrDefault(i => i != null);
+                    if (firstElement != null)
+                    {
+                        type = firstElement.GetType();
+                    }
                 }
 
                 if (!string.IsNullOrEmpty(ValueProperty))
@@ -468,6 +456,11 @@ namespace Radzen
                 if (!string.IsNullOrEmpty(DisabledProperty))
                 {
                     disabledPropertyGetter = GetGetter(DisabledProperty, type);
+                }
+
+                if (selectedItems.Count == 0)
+                {
+                    selectedItems = new HashSet<object>(ItemComparer);
                 }
             }
         }
@@ -522,7 +515,6 @@ namespace Radzen
             return item;
         }
 
-#if NET5_0_OR_GREATER
         /// <inheritdoc/>
         protected override async Task OnDataChanged()
         {
@@ -533,7 +525,6 @@ namespace Radzen
                 await InvokeAsync(Virtualize.RefreshDataAsync);
             }
         }
-#endif
 
         /// <summary>
         /// Gets the popup identifier.
@@ -653,9 +644,7 @@ namespace Radzen
             {
                 if (IsVirtualizationAllowed())
                 {
-#if NET5_0_OR_GREATER
                     items = virtualItems ?? Enumerable.Empty<object>().ToList();
-#endif
                 }
                 else
                 {
@@ -695,8 +684,10 @@ namespace Radzen
 
                 if (selectedIndex >= 0 && selectedIndex <= items.Count() - 1)
                 {
-                    await JSRuntime.InvokeAsync<string>("Radzen.setInputValue", search, $"{searchText}".Trim());
                     var itemToSelect = items.ElementAtOrDefault(selectedIndex);
+
+                    await JSRuntime.InvokeAsync<string>("Radzen.setInputValue", search, $"{searchText}".Trim());
+
                     if (itemToSelect != null)
                     {
                         await OnSelectItem(itemToSelect, true);
@@ -713,7 +704,7 @@ namespace Radzen
                 {
                     if (!Multiple)
                     {
-                        await JSRuntime.InvokeVoidAsync("Radzen.closePopup", PopupID);
+                        await ClosePopup(key);
                     }
                 }
             }
@@ -725,7 +716,7 @@ namespace Radzen
             }
             else if (key == "Escape" || key == "Tab")
             {
-                await JSRuntime.InvokeVoidAsync("Radzen.closePopup", PopupID);
+                await ClosePopup(key);
             }
             else if (key == "Delete" && AllowClear)
             {
@@ -750,7 +741,9 @@ namespace Radzen
             }
             else
             {
-                var filteredItems = Query.Where(TextProperty, args.Key, StringFilterOperator.StartsWith, FilterCaseSensitivity.CaseInsensitive)
+                var filteredItems = (!string.IsNullOrEmpty(TextProperty) ?
+                    Query.Where(TextProperty, args.Key, StringFilterOperator.StartsWith, FilterCaseSensitivity.CaseInsensitive) :
+                    Query)
                     .Cast<object>()
                     .ToList();
 
@@ -786,6 +779,11 @@ namespace Radzen
             }
         }
 
+        internal virtual async Task ClosePopup(string key)
+        {
+            await JSRuntime.InvokeVoidAsync("Radzen.closePopup", PopupID);
+        }
+
         int itemIndex;
         string previousKey;
 
@@ -808,13 +806,11 @@ namespace Radzen
                 _view = null;
                 if (IsVirtualizationAllowed())
                 {
-#if NET5_0_OR_GREATER
                     if (virtualize != null)
                     {
                         await virtualize.RefreshDataAsync();
                     }
                     await InvokeAsync(() => { StateHasChanged(); });
-#endif
                 }
                 else
                 {
@@ -825,7 +821,6 @@ namespace Radzen
             {
                 if (IsVirtualizationAllowed())
                 {
-#if NET5_0_OR_GREATER
                     if (virtualize != null)
                     {
                         await InvokeAsync(virtualize.RefreshDataAsync);
@@ -835,7 +830,6 @@ namespace Radzen
                         await LoadData.InvokeAsync(await GetLoadDataArgs());
                     }
                     await InvokeAsync(() => { StateHasChanged(); });
-#endif
                 }
                 else
                 {
@@ -885,7 +879,6 @@ namespace Radzen
         /// <returns>LoadDataArgs.</returns>
         internal virtual async System.Threading.Tasks.Task<LoadDataArgs> GetLoadDataArgs()
         {
-#if NET5_0_OR_GREATER
             if (AllowVirtualization)
             {
                 return await Task.FromResult(new Radzen.LoadDataArgs() { Skip = 0, Top = PageSize, Filter = searchText });
@@ -894,9 +887,6 @@ namespace Radzen
             {
                 return await Task.FromResult(new Radzen.LoadDataArgs() { Filter = searchText });
             }
-#else
-            return await Task.FromResult(new Radzen.LoadDataArgs() { Filter = searchText });
-#endif
         }
 
         /// <summary>
@@ -931,13 +921,12 @@ namespace Radzen
         /// <returns>A Task representing the asynchronous operation.</returns>
         public override async Task SetParametersAsync(ParameterView parameters)
         {
-#if NET5_0_OR_GREATER
             var pageSize = parameters.GetValueOrDefault<int>(nameof(PageSize));
             if (pageSize != default(int))
             {
                 PageSize = pageSize;
             }
-#endif
+
             var selectedItemChanged = parameters.DidParameterChange(nameof(SelectedItem), SelectedItem);
             if (selectedItemChanged)
             {
@@ -1010,7 +999,7 @@ namespace Radzen
             {
                 if (Multiple)
                 {
-                    return selectedItems.IndexOf(item) != -1;
+                    return selectedItems.Contains(item);
                 }
                 else
                 {
@@ -1156,7 +1145,11 @@ namespace Radzen
 
                     if (elementType == typeof(object) && typeof(EnumerableQuery).IsAssignableFrom(query.GetType()) && query.Any())
                     {
-                        elementType = query.FirstOrDefault().GetType();
+                        var firstElement = query.Cast<object>().FirstOrDefault(i => i != null);
+                        if (firstElement != null)
+                        {
+                            elementType = firstElement.GetType();
+                        }
                     }
 
                     if (elementType != null)
@@ -1236,18 +1229,14 @@ namespace Radzen
                 }
                 else
                 {
-                    selectedItems = selectedItems.AsQueryable().Where(DynamicLinqCustomTypeProvider.ParsingConfig, $@"!object.Equals(it.{ValueProperty},@0)", value).ToList();
+                    selectedItems = selectedItems.AsQueryable().Where(i => !object.Equals(GetItemOrValueFromProperty(i, ValueProperty), value)).ToHashSet(ItemComparer);
                 }
             }
             else
             {
-                if (!selectedItems.Any(i => object.Equals(i, item)))
+                if (!selectedItems.Add(item))
                 {
-                    selectedItems.Add(item);
-                }
-                else
-                {
-                    selectedItems = selectedItems.Where(i => !object.Equals(i, item)).ToList();
+                    selectedItems.Remove(item);
                 }
             }
         }
@@ -1301,7 +1290,7 @@ namespace Radzen
                                     item = view.AsQueryable().Where(DynamicLinqCustomTypeProvider.ParsingConfig, $@"{ValueProperty} == @0", v).FirstOrDefault();
                                 }
 
-                                if (!object.Equals(item, null) && !selectedItems.AsQueryable().Where(DynamicLinqCustomTypeProvider.ParsingConfig, $@"object.Equals(it.{ValueProperty},@0)", v).Any())
+                                if (!object.Equals(item, null) && !selectedItems.AsQueryable().Where(i => object.Equals(GetItemOrValueFromProperty(i, ValueProperty), v)).Any())
                                 {
                                     selectedItems.Add(item);
                                 }
@@ -1309,7 +1298,7 @@ namespace Radzen
                         }
                         else
                         {
-                            selectedItems = ((IEnumerable)values).Cast<object>().ToList();
+                            selectedItems = values.Cast<object>().ToHashSet(ItemComparer);
                         }
 
                     }
@@ -1320,6 +1309,11 @@ namespace Radzen
                 selectedItem = null;
             }
         }
+
+        /// <summary>
+        /// For lists of objects, an IEqualityComparer to control how selected items are determined
+        /// </summary>
+        [Parameter] public IEqualityComparer<object> ItemComparer { get; set; }
 
         internal bool IsItemSelectedByValue(object v)
         {

@@ -39,12 +39,42 @@ namespace Radzen.Blazor
         }
 
         /// <summary>
+        /// Gets or sets a value indicating whether DataList should show empty message.
+        /// </summary>
+        [Parameter]
+        public bool ShowEmptyMessage { get; set; }
+
+        private string _emptyText = "No records to display.";
+        /// <summary>
+        /// Gets or sets the empty text shown when Data is empty collection.
+        /// </summary>
+        /// <value>The empty text.</value>
+        [Parameter]
+        public string EmptyText
+        {
+            get { return _emptyText; }
+            set
+            {
+                if (value != _emptyText)
+                {
+                    _emptyText = value;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the empty template shown when Data is empty collection.
+        /// </summary>
+        /// <value>The empty template.</value>
+        [Parameter]
+        public RenderFragment EmptyTemplate { get; set; }
+
+        /// <summary>
         /// Gets or sets a value indicating whether to wrap items.
         /// </summary>
         /// <value><c>true</c> if wrap items; otherwise, <c>false</c>.</value>
         [Parameter]
         public bool WrapItems { get; set; }
-#if NET5_0_OR_GREATER
 
         /// <summary>
         /// Gets or sets a value indicating whether this instance is virtualized.
@@ -88,12 +118,10 @@ namespace Radzen.Blazor
 
             return new Microsoft.AspNetCore.Components.Web.Virtualization.ItemsProviderResult<TItem>(virtualDataItems, totalItemsCount);
         }
-#endif
         RenderFragment DrawDataListRows()
         {
             return new RenderFragment(builder =>
             {
-#if NET5_0_OR_GREATER
                 if (AllowVirtualization)
                 {
                     builder.OpenComponent(0, typeof(Microsoft.AspNetCore.Components.Web.Virtualization.Virtualize<TItem>));
@@ -115,9 +143,6 @@ namespace Radzen.Blazor
                 {
                     DrawRows(builder);
                 }
-#else
-                DrawRows(builder);
-#endif
             });
         }
 
@@ -127,12 +152,11 @@ namespace Radzen.Blazor
         public async override Task Reload()
         {
             await base.Reload();
-#if NET5_0_OR_GREATER
+
             if (virtualize != null)
             {
                 await virtualize.RefreshDataAsync();
             }
-#endif
         }
 
         internal void DrawRows(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder builder)

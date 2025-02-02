@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.Primitives;
 using Microsoft.JSInterop;
 using System;
 using System.Collections.Generic;
@@ -35,15 +36,14 @@ namespace Radzen.Blazor
         /// <inheritdoc />
         protected override string GetComponentCssClass()
         {
-            return GetClassList("rz-numeric")
-                                        .Add($"rz-text-align-{Enum.GetName(typeof(TextAlign), TextAlign).ToLower()}")
-                                        .ToString();
+            return GetClassList("rz-numeric").ToString();
         }
 
         string GetInputCssClass()
         {
             return GetClassList("rz-numeric-input")
                         .Add("rz-inputtext")
+                        .Add($"rz-text-align-{Enum.GetName(typeof(TextAlign), TextAlign).ToLower()}")
                         .ToString();
         }
 
@@ -94,6 +94,14 @@ namespace Radzen.Blazor
         };
 
 #if NET7_0_OR_GREATER
+        private static TNum SumFloating<TNum>(TNum value1, TNum value2)
+        {
+            var decimalValue1 = (decimal)Convert.ChangeType(value1, TypeCode.Decimal);
+            var decimalValue2 = (decimal)Convert.ChangeType(value2, TypeCode.Decimal);
+
+            return (TNum)Convert.ChangeType(decimalValue1 + decimalValue2, typeof(TNum));
+        }
+
         /// <summary>
         /// Use native numeric type to process the step up/down while checking for possible overflow errors
         /// and clamping to Min/Max values
@@ -117,7 +125,17 @@ namespace Radzen.Blazor
                 return valueToUpdate;
             }
 
-            var newValue = valueToUpdate + (stepUp ? step : -step);
+            TNum newValue = default(TNum);
+
+            if (typeof(TNum) == typeof(double) || typeof(TNum) == typeof(double?) ||
+                typeof(TNum) == typeof(float) || typeof(TNum) == typeof(float?))
+            {
+                newValue = SumFloating(valueToUpdate, (stepUp ? step : -step));
+            }
+            else 
+            {
+                newValue = valueToUpdate + (stepUp ? step : -step);
+            }
 
             if (Max.HasValue && newValue > TNum.CreateSaturating(Max.Value) 
                 || Min.HasValue && newValue < TNum.CreateSaturating(Min.Value) 
@@ -198,6 +216,8 @@ namespace Radzen.Blazor
                 {
                     _value = value;
                 }
+
+                stringValue = $"{value}";
             }
         }
 
@@ -209,22 +229,22 @@ namespace Radzen.Blazor
         {
             get
             {
-                if (Value != null)
+                if (_value != null)
                 {
                     if (Format != null)
                     {
-                        if (Value is IFormattable formattable)
+                        if (_value is IFormattable formattable)
                         {
                             return formattable.ToString(Format, Culture);
                         }
-                        decimal decimalValue = ConvertToDecimal(Value);
+                        decimal decimalValue = ConvertToDecimal(_value);
                         return decimalValue.ToString(Format, Culture);
                     }
-                    return Value.ToString();
+                    return _value.ToString();
                 }
                 else
                 {
-                    return "";
+                    return stringValue;
                 }
             }
             set
@@ -287,13 +307,6 @@ namespace Radzen.Blazor
         public bool ReadOnly { get; set; }
 
         /// <summary>
-        /// Gets or sets a value indicating whether input automatic complete is enabled.
-        /// </summary>
-        /// <value><c>true</c> if input automatic complete is enabled; otherwise, <c>false</c>.</value>
-        [Parameter]
-        public override bool AutoComplete { get; set; } = false;
-
-        /// <summary>
         /// Gets or sets a value indicating whether up down buttons are shown.
         /// </summary>
         /// <value><c>true</c> if up down buttons are shown; otherwise, <c>false</c>.</value>
@@ -313,7 +326,15 @@ namespace Radzen.Blazor
         /// <param name="args">The <see cref="ChangeEventArgs"/> instance containing the event data.</param>
         protected async System.Threading.Tasks.Task OnChange(ChangeEventArgs args)
         {
+            stringValue = $"{args.Value}";
             await InternalValueChanged(args.Value);
+        }
+
+        string stringValue;
+        async Task SetValue(string value)
+        {
+            stringValue = value;
+            await InternalValueChanged(value);
         }
 
         private string RemoveNonNumericCharacters(object value)
@@ -374,6 +395,8 @@ namespace Radzen.Blazor
             }
 
             newValue = ApplyMinMax(newValue);
+
+            stringValue = $"{newValue}";
 
             if (EqualityComparer<TValue>.Default.Equals(Value, newValue))
             {
@@ -438,8 +461,14 @@ namespace Radzen.Blazor
             var converter = TypeDescriptor.GetConverter(typeof(TValue));
             if (converter.CanConvertTo(typeof(decimal)))
                 return (decimal)converter.ConvertTo(null, Culture, input, typeof(decimal));
-            
-            return (decimal)ConvertType.ChangeType(input, typeof(decimal));
+            try
+            {
+                return (decimal)ConvertType.ChangeType(input, typeof(decimal), Culture);
+            }
+            catch
+            {
+                return decimal.Zero;
+            }
         }
 
         private TValue ConvertFromDecimal(decimal? input)
@@ -453,7 +482,7 @@ namespace Radzen.Blazor
                 return (TValue)converter.ConvertFrom(null, Culture, input);
             }
             
-            return (TValue)ConvertType.ChangeType(input, typeof(TValue));
+            return (TValue)ConvertType.ChangeType(input, typeof(TValue), Culture);
         }
 
         /// <summary>
@@ -506,6 +535,8 @@ namespace Radzen.Blazor
                 {
                     await UpdateValueWithStep(false);
                 }
+
+                preventKeyPress = false;
             }
             else
             {
@@ -525,7 +556,6 @@ namespace Radzen.Blazor
         [Parameter]
         public string DownAriaLabel { get; set; } = "Down";
 
-#if NET5_0_OR_GREATER
         /// <summary>
         /// Sets the focus on the input element.
         /// </summary>
@@ -533,6 +563,5 @@ namespace Radzen.Blazor
         {
             await input.FocusAsync();
         }
-#endif
     }
 }
